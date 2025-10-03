@@ -1,0 +1,1152 @@
+#INCLUDE 'RWMake.ch'
+#INCLUDE 'Totvs.ch'
+#INCLUDE 'ParmType.ch'
+#INCLUDE "ParmTypeCH.ch"
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 30/09/2025 v1.20
+Consultoria	: CX Consultoria
+Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
+				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
+			A sequência dos campos é exatamente a mesma do SX1, sendo que muitos são opcionais
+				e podem não ser informados que vai funcionar, o array precisa ser pelo menos 11
+				posições, sendo que nesses alguns são opcionais: como o GRUPO[1], ORDEM[2], DESCRIÇÃO
+				ESPANHOL[4], DESCRIÇÃO INGLÊS[5], VARIÁVEL[6], PRESSEL[10]
+			A ordem segue a ordem dos elementos do array, o grupo de perguntas se não informado
+				puxa do primeiro parâmetro passado, e vice versa.
+			O Help pode ser um array com os textos ou uma string com o HELP do XB4
+			Também permite a seleção de arquivos mais flexível, permitindo usar máscaras (X1_DEF02),
+				Diretório Inicial (X1_DEF03), lAbrir (X1_DEF04) e lServer (X1_DEF05)
+			É possível carregar um conjunto de dados das perguntas padrão (SX1), basta não informar
+				o array de definição das perguntas.
+			Faz o vínculo entre as variáveis MV_PAR## e as variáveis informadas no array de perguntas
+				X1_VAR01 ou X1_VAR02, então se altera o MV_PAR a varíavel já recebe o valor automaticamente
+=================================================================================================*/
+//O SOFTWARE É FORNECIDO "TAL COMO ESTÁ", SEM GARANTIA DE QUALQUER TIPO, EXPRESSA OU IMPLÍCITA,
+//INCLUINDO MAS NÃO SE LIMITANDO A GARANTIAS DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE
+//ESPECÍFICA E NÃO INFRACÇÃO. EM NENHUM CASO OS AUTORES OU TITULARES DE DIREITOS AUTORAIS
+//SERÃO RESPONSÁVEIS POR QUALQUER REIVINDICAÇÃO, DANOS OU OUTRA RESPONSABILIDADE, SEJA 
+//EM AÇÃO DE CONTRATO OU QUALQUER OUTRA FORMA, PROVENIENTE, FORA OU RELACIONADO AO SOFTWARE. 
+//
+//                    *** USE A VONTADE, POR SUA CONTA E RISCO ***
+//-------------------------------------------------------------------------------------------------
+// 01 /02 /03     /04     /05     /06      /07  /08     /09     /10    /11 /12   /13   /14   /15   /16   /17   /18   /19   /20   /21   /22   /23   /24   /25   /26   /27   /28   /29   /30   /31   /32   /33   /34   /35   /36   /37   /38/39  /40 /41 /42
+// Grp/Ord/Desc.Pt/Desc.Es/Desc.En/Variavel/Tipo/Tamanho/Decimal/Presel/GSC/Valid/Var01/Def1P/Def1E/Def1I/Cnt01/Var02/Def2P/Def2E/Def2I/Cnt02/Var03/Def3P/Def3E/Def3I/Cnt03/Var04/Def4P/Def4E/Def4I/Cnt04/Var05/Def5P/Def5E/Def5I/Cnt05/F3/Pyme/SXG/Hlp/Pict
+
+//                03                     07 08 09 11  12              14    17            18   22  24     29     34     38      41
+//                Descrição              Tp Tm Dc GCS Validacao       D1    Cnt1          D2  Cnt2 D3     D4     D5     F3      Hlp
+//aAdd(aPergs,{,,'Filiais ?'		,,,,'C',90,0,,'R','NaoVazio()'	,,'',,,'RA_FILIAL'	,,'',,,'',,'',,,,,'',,,,,'',,,,'XM0',,,'.RHFILIAL.'})	//RANGE
+//aAdd(aPergs,{,,'Linha Produção ?'	,,,,'C',02,0,,'G','NaoVazio().And.ExistCpo("ZD0")'	,'cCodPla','',,,''	,,'',,,'',,'',,,,,'',,,,,'',,,,'ZD0',,,})
+//aAdd(aPergs,{,,'Admissão de ?'	,,,,'D',08,0,,'G',{|| sfVld() }	,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,,{'EXEMPLO DE HELP'}})
+//aAdd(aPergs,{,,'Admissão até ?'	,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,,'.RHDTADMAT.'})
+//aAdd(aPergs,{,,'Situações ?'		,,,,'C',05,0,,'G','fSituacao()' ,,'',,,' ADFT'		,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,,'.RHSITUA.'})
+//aAdd(aPergs,{,,'Categorias ?'		,,,,'C',15,0,,'G','fcategoria()',,'',,,'ACDEGHIMPST',,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,,'.RHCATEG.'})
+//aAdd(aPergs,{,,'Informações De ?'	,,,,'N',01,0,3,'C',''			,,'Ass Médica',,,,,'Ass Odontológica',,,,,'Ambas',,,,,'',,,,,'',,,,,,,,''})	//COMBO
+//aAdd(aPergs,{,,'Arquivo'			,,,,'C',100,0,,'F','U_VLd1()'	,,GETF_LOCALHARD,,,''			,,'*.csv',,,  ,,'C:\Protheus\',,,,,.T.,,,,,.F.,,,,'','',,{'HELP DO CAMPO'}})
+
+//-- Posiçõs aPergs, segue a ordem dos campos do SX1, compatibilidade com arrays já usados atualmente
+Static nX1_GRUPO	:=	01	;	Static nX1_ORDEM	:=	02
+Static nX1_PERGUNT	:=	03	;	Static nX1_PERSPA	:=	04	;	Static nX1_PERENG	:=	05
+Static nX1_VARIAVL	:=	06	;	Static nX1_TIPO		:=	07	;	Static nX1_TAMANHO	:=	08	;	Static nX1_DECIMAL	:=	09
+Static nX1_PRESEL	:=	10	;	Static nX1_GSC		:=	11	;	Static nX1_VALID	:=	12
+Static nX1_VAR01	:=	13	;	Static nX1_DEF01	:=	14	;	Static nX1_DEFSPA1	:=	15	;	Static nX1_DEFENG1	:=	16	;	Static nX1_CNT01	:=	17
+Static nX1_VAR02	:=	18	;	Static nX1_DEF02	:=	19	;	Static nX1_DEFSPA2	:=	20	;	Static nX1_DEFENG2	:=	21	;	Static nX1_CNT02	:=	22
+Static nX1_VAR03	:=	23	;	Static nX1_DEF03	:=	24	;	Static nX1_DEFSPA3	:=	25	;	Static nX1_DEFENG3	:=	26	;	Static nX1_CNT03	:=	27
+Static nX1_VAR04	:=	28	;	Static nX1_DEF04	:=	29	;	Static nX1_DEFSPA4	:=	30	;	Static nX1_DEFENG4	:=	31	;	Static nX1_CNT04	:=	32
+Static nX1_VAR05	:=	33	;	Static nX1_DEF05	:=	34	;	Static nX1_DEFSPA5	:=	35	;	Static nX1_DEFENG5	:=	36	;	Static nX1_CNT05	:=	37
+Static nX1_F3		:=	38	;	Static nX1_PYME		:=	39	;	Static nX1_GRPSXG	:=	40
+Static nX1_HELP		:=	41
+Static nX1_PICTURE	:=	42
+
+#Define _NomeProg_		FileNoExt(ProcSource())
+#Define _LINHA_			StrZero(ProcLine(),5)
+#Define _MsgLinha_		_NomeProg_+'('+_LINHA_+')'
+
+#Define _nIncLin		15
+#Define _nEspIco		03
+#Define _nTamCh			04
+
+#xTranslate _FieldGet(<cCampo>) => ;
+	FieldGet(FieldPos(<cCampo>))
+//-- Parâmetros obrigatórios
+#xCommand PARAMOBR [ <param> VAR ] <varname> ;
+	[ MESSAGE <message> ] ;
+	=> ;
+	If (ValType(<varname>) == 'U' ) ;;
+		UserException(PT_STR0001+<"param">+PT_STR0002+<"varname">+" erro, é obrigatório e está NULL. " [ MESSAGE <message> ]) ;;
+	EndIf
+
+//-------------------------------------------------------------------------------------------------
+User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
+						,	ulAsk		AS Variant	;	//02 ulAsk
+						,	ucTitle		AS Variant	;	//03 ucTitle
+						,	lOnlyView	AS Logical	;	//04 lOnlyView	-- legado, sem uso aqui
+						,	oDlg		AS Object	;	//05 oDlg		-- legado, sem uso aqui
+						,	lUseProf	AS Logical	;	//06 lUseProf (def .T.)
+						,	aPergs		AS Array	;	//07 aPergs
+						,	lBreakLine	AS Logical	;	//08 lBreakLine (def .F.)	-- Quebra linha entre o título e a pergunte
+						,	lHasHelp	AS Logical	;	//09 lHasHelp (def .T.)		-- Mostra Help
+						,	lValFilGC	AS Logical	;	//10 lValFilGC	-- legado, sem uso aqui
+						)							AS Logical
+	
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local aVarAux	:= {}							AS Array
+	Local aBkpVar	:= {}							AS Array
+	Local aTxtPerg	:= {}							AS Array
+	Local aCombos	:= {}							AS Array
+	Local cTab		:= 'SX1'						AS Character
+	Local cHlpRange									AS Character
+	Local cLang		:= FwRetIdiom() 				AS Character	//-- Retorna o idioma selecionado
+	Local bBlkGet									AS CodeBlock
+	Local bValid, bFile, bHelp, bGotFocus			AS CodeBlock
+	Local oPnl,oPrg,oGet							AS Object
+	Local oDlgModal,oDlgPerg						AS Object
+	Local oFonte									AS Object
+	Local oGet1										AS Object
+	Local lOK		:= .F.							AS Logical
+	Local nLinha	:= 005							AS Numeric
+	Local nX,nY										AS Numeric
+	Local nLenPergs									AS Numeric
+	Local nLang										AS Numeric
+	Local nLarg										AS Numeric
+	Local nLrgMax									AS Numeric
+	Local nCol										AS Numeric
+	Local uHlpTmp									AS Variant
+
+	Local nOpcoes									AS Numeric
+	Local cMascara									AS Character
+	Local cDirInicial								AS Character
+	Local lAbrir									AS Logical
+	Local lServer									AS Logical
+
+	//-- Línguas
+	Local nPt		:= 01							AS Numeric
+	Local nEs		:= 02							AS Numeric
+	Local nEn		:= 03							AS Numeric
+	
+	//-- Transferimos o Conteudo do Array para variaveis
+	//-- Alguns Elementos (Cnt02..Cnt05,...) estao mantindos para compatibilizacao
+	//-- Embora nao sejam utilizados
+	Local cVar		,cTipo							AS Character
+	Local nTamanho	,nDecimal	,nPresel			AS Numeric
+	Local cGSC										AS Character
+	Local cF3		,cGrpSxg						AS Character
+	Local uHelp										AS Variant
+	Local cPict										AS Character
+	Local cValid									AS Character
+	Local uValid									AS Variant
+	
+	Private aValid	:= {}							AS Array
+	Private abValid	:= {}							AS Array
+	Private aHelp	:= {}							AS Array
+	Private aHelp2	:= {}							AS Array
+	Private nPHelp	:= 01							AS Numeric
+	Private oProfile,oMemo							AS Object
+	
+	//-- Tratamento de conflito com a CXPergunta ------------------------------
+	If ValType(ucPergunta) == 'A'
+		Return U_CXPergunta(ucPergunta,ulAsk,ucTitle)		
+	EndIf
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	Default ucPergunta	:= NIL
+	Default ulAsk		:= .T.
+	Default ucTitle		:= 'Parâmetros'
+	Default lOnlyView	:= .F.	//-- legado, sem uso aqui
+	Default oDlg		:= NIL	//-- legado, sem uso aqui
+	Default lUseProf	:= .T.
+	Default lBreakLine	:= .F.	//-- Quebra linha entre o título e a pergunte
+	Default lHasHelp	:= .T.	//-- Mostra Help
+	Default lValFilGC	:= .F.	//-- legado, sem uso aqui
+
+	//-------------------------------------------------------------------------
+	Do Case
+		Case cLang == 'pt-br'	; nLang	:= nPT
+		Case cLang == 'es'		; nLang	:= nES
+		Otherwise				; nLang	:= nEN
+	EndCase
+	
+	//-- Verifica se foi passado o grupo no primeiro parâmetro, ou no array 
+	//	aPergs, pelo menos um desses precisa para obter qual o grupo de perguntas
+	If ValType(ucPergunta) == 'U'
+		ucPergunta	:= aPergs[1][nX1_GRUPO]
+		If Empty(ucPergunta)
+			FwAlertError(	'ERRO: Parâmetro ucPergunta não informado na função '+_NomeProg_,_MsgLinha_)
+			Return .F.
+		EndIf
+	EndIf
+
+	//-- Carrega dados diretamente do SX1 SE NECESSÁRIO ! ---------------------
+	If Empty(aPergs)
+		aPergs	:= {}
+		(cTab)->(dbSetOrder(1))
+		nLenPergs	:= (cTab)->(FCount())
+		If (cTab)->(dbSeek(PadR(ucPergunta,10)))
+			While 	(cTab)->(!EOF()) .And. ;
+					(cTab)->(_FieldGet('X1_GRUPO')) == PadR(ucPergunta,10)
+				
+				aAdd(aPergs,Array(nLenPergs))
+				For nX := 1 to nLenPergs
+					aTail(aPergs)[nX]	:= (cTab)->(FieldGet(nX))
+				Next nX
+				(cTab)->(dbSkip())
+			EndDo
+		Else
+			FwAlertError(	'ERRO: Pergunta '+cPerg+' NÃO encontrada nos dicionários (SX1)',_MsgLinha_)
+			Return .F.
+		EndIf
+	EndIf
+
+	//-- Ajusta tamanhos conforme SXG se necessário ---------------------------
+	For nX := 1 to Len(aPergs)
+		cGrpSxg	:= If(nX1_GRPSXG > Len(aPergs),'',aPergs[nX,nX1_GRPSXG])
+		If 	.Not. Empty(cGrpSxg) .And. ;
+			FWSXGUtil():FieldGroupExists( cGrpSxg ) 				//-- Grupo de campos informado existe (lRet)
+			aPergs[nX1_TAMANHO]	:= FWSXGUtil():SXGSize( cGrpSxg )	//-- Tamanho do grupo de campo - XG_SIZE
+		EndIf
+	Next nX
+
+	//-- Monta lista de variáveis utilizadas ----------------------------------
+	sfInitVar(	aPergs		;	//01 aPergs
+			,	@aVarAux	;	//02 @aVarAux
+			,	@aBkpVar	;	//03 @aBkpVar
+			)
+
+	//-- Carrega perguntas salvas no profile do usuário -----------------------
+	If lUseProf
+		oProfile	:= FwProfile():New()
+		sfCarregaPerg(ucPergunta,Len(aPergs))
+	EndIf
+
+	//-- Verifica parâmetros carregados e ajusta se necessário ----------------
+	sfProcParam(aPergs	;	//01 aPergs
+			,	aVarAux	;	//02 aVarAux
+			)
+
+	//-- Criação da tela ------------------------------------------------------
+	If ulAsk
+		cHlpRange	:= 	"Para definir intervalos de dados sequenciais, utilize hífen (1-3) e para os não "+;
+						"sequenciais, ponto e vírgula (3;5;1). Utilizar aspas simples para desconsiderar "+;
+						"hifens nos conteúdos. Exemplo: '000001-01'-'000004-09';000006;0000008-'000009-08'"
+		oFonte		:= tFont():New('Arial',,-12,,.F.)
+
+		oDlgModal	:= FWDialogModal():New()
+		oDlgModal:SetEscClose(.T.)
+		oDlgModal:setTitle(ucTitle)
+		oDlgModal:setSize(270,270)
+		oDlgModal:createDialog()
+		//oDlgModal:addCloseButton({|| lOK := .T., oDlgModal:oOwner:End()}, 'OK')
+		oDlgModal:AddButton('OK'		 ,{||lOK := .T., oDlgModal:oOwner:End() },'OK',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
+		oDlgModal:AddButton('Cancelar',{|| oDlgModal:oOwner:End() },'Cancelar',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
+		oDlgPerg	:= oDlgModal:getPanelMain()
+
+		oPnl := tGroup():New( 001,005, (oDlgPerg:nWidth/2)-IIf(lHasHelp,90,45), (oDlgPerg:nHeight/2)+40,, oDlgPerg,,,.T., )
+
+		//-- Cria objeto Scroll
+		oPrg := tScrollArea():New(oPnl,001,001,150,250)
+		oPrg:Align := CONTROL_ALIGN_ALLCLIENT
+
+		For nX := 1 To Len(aPergs)
+			aAdd(aTxtPerg,Array(3))
+			aAdd(aCombos,Array(3,5))
+
+			nLenPergs	:=	Len(aPergs[nX])			//-- Obtem o tamanho do array da pergunta lida para posterior comparacao
+
+			//-- Carrega os Elementos do Array para Variaveis afim de facilitar a leitura do fonte
+			//cOrdem	:= aPergs[nX,nX1_ORDEM]	//-- IGNORO ESSA ORDEM, USO A ORDEM NATURAL DO ARRAY
+			aTxtPerg[nX][nPT]	:= aPergs[nX,nX1_PERGUNT]
+			aTxtPerg[nX][nES]	:= aPergs[nX,nX1_PERSPA]
+			aTxtPerg[nX][nEN]	:= aPergs[nX,nX1_PERENG]
+			nTamanho:= aPergs[nX,nX1_TAMANHO]
+			nDecimal:= aPergs[nX,nX1_DECIMAL]
+			Default nDecimal	:= 0
+			nPresel	:= aPergs[nX,nX1_PRESEL]
+			Default nPresel		:= 1
+			cTipo	:= aPergs[nX,nX1_TIPO]
+			cGSC	:= aPergs[nX,nX1_GSC]
+
+			uValid	:= If(nX1_VALID 	> nLenPergs,NIL,aPergs[nX,nX1_VALID])
+
+	//		cCnt01	:= If(nX1_CNT01 	> nLenPergs,'',aPergs[nX,nX1_CNT01])	//-- Default campos padrões
+	//		cCnt02	:= If(nX1_CNT02  	> nLenPergs,'',aPergs[nX,nX1_CNT02])	//-- Default tipo Range!
+	//		cCnt03	:= If(nX1_CNT03  	> nLenPergs,'',aPergs[nX,nX1_CNT03])
+	//		cCnt04	:= If(nX1_CNT04  	> nLenPergs,'',aPergs[nX,nX1_CNT04])
+	//		cCnt05	:= If(nX1_CNT05  	> nLenPergs,'',aPergs[nX,nX1_CNT05])
+	//		cVar01	:= If(nX1_VAR01 	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR01]))
+	//		cVar02	:= If(nX1_VAR02  	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR02]))
+	//		cVar03	:= If(nX1_VAR03  	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR03]))
+	//		cVar04	:= If(nX1_VAR04  	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR04]))
+	//		cVar05	:= If(nX1_VAR05  	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR05]))
+
+			If cGSC == 'C'
+				aCombos[nX][nPT][1]	:= If(nX1_DEF01  	> nLenPergs,'',aPergs[nX,nX1_DEF01])
+				aCombos[nX][nES][1]	:= If(nX1_DEFSPA1	> nLenPergs,'',aPergs[nX,nX1_DEFSPA1])
+				aCombos[nX][nEN][1]	:= If(nX1_DEFENG1	> nLenPergs,'',aPergs[nX,nX1_DEFENG1])
+				
+				aCombos[nX][nPT][2]	:= If(nX1_DEF02  	> nLenPergs,'',aPergs[nX,nX1_DEF02])
+				aCombos[nX][nES][2]	:= If(nX1_DEFSPA2	> nLenPergs,'',aPergs[nX,nX1_DEFSPA2])
+				aCombos[nX][nEN][2]	:= If(nX1_DEFENG2	> nLenPergs,'',aPergs[nX,nX1_DEFENG2])
+				
+				aCombos[nX][nPT][3]	:= If(nX1_DEF03  	> nLenPergs,'',aPergs[nX,nX1_DEF03])
+				aCombos[nX][nES][3]	:= If(nX1_DEFSPA3	> nLenPergs,'',aPergs[nX,nX1_DEFSPA3])
+				aCombos[nX][nEN][3]	:= If(nX1_DEFENG3	> nLenPergs,'',aPergs[nX,nX1_DEFENG3])
+				
+				aCombos[nX][nPT][4]	:= If(nX1_DEF04  	> nLenPergs,'',aPergs[nX,nX1_DEF04])
+				aCombos[nX][nES][4]	:= If(nX1_DEFSPA4	> nLenPergs,'',aPergs[nX,nX1_DEFSPA4])
+				aCombos[nX][nEN][4]	:= If(nX1_DEFENG4	> nLenPergs,'',aPergs[nX,nX1_DEFENG4])
+				
+				aCombos[nX][nPT][5]	:= If(nX1_DEF05  	> nLenPergs,'',aPergs[nX,nX1_DEF05])
+				aCombos[nX][nES][5]	:= If(nX1_DEFSPA5	> nLenPergs,'',aPergs[nX,nX1_DEFSPA5])
+				aCombos[nX][nEN][5]	:= If(nX1_DEFENG5	> nLenPergs,'',aPergs[nX,nX1_DEFENG5])
+			ElseIf cGSC == 'F'
+				nOpcoes		:= If(nX1_DEF01  	> nLenPergs,GETF_LOCALHARD,aPergs[nX,nX1_DEF01])
+				cMascara	:= If(nX1_DEF02  	> nLenPergs,'',aPergs[nX,nX1_DEF02])
+				cDirInicial	:= If(nX1_DEF03  	> nLenPergs,'',aPergs[nX,nX1_DEF03])
+				lAbrir		:= If(nX1_DEF04  	> nLenPergs,.T.,aPergs[nX,nX1_DEF04])
+				lServer		:= If(nX1_DEF05  	> nLenPergs,.F.,aPergs[nX,nX1_DEF05])
+			EndIf
+
+			//-- Trata Campos Especiais que podem não ser fornecidos
+			cF3		:= If(nX1_F3     	> nLenPergs,'',aPergs[nX,nX1_F3])
+			uHelp   := If(nX1_HELP	 	> nLenPergs,'',aPergs[nX,nX1_HELP])
+			cPict   := If(nX1_PICTURE	> nLenPergs,'',AllTrim(aPergs[nX,nX1_PICTURE]))
+			If 	Empty(cPict) .And. ;
+				cTipo == 'N'
+				cPict	:= sfMascNum(nTamanho,nDecimal)
+			EndIf
+			
+			//-- Preenche outras línguas --------------------------------------
+			aTxtPerg[nX][nES]	:= IIF(Empty(aTxtPerg[nX][nES]),aTxtPerg[nX][nPT],aTxtPerg[nX][nES] )
+			aTxtPerg[nX][nEN]	:= IIF(Empty(aTxtPerg[nX][nEN]),aTxtPerg[nX][nPT],aTxtPerg[nX][nEN] )
+
+			If cGSC == 'C'			//-- Mult Escolha / Combo
+				For nY := 1 to 5
+					aCombos[nX][nES][nY]	:= IIF(Empty(aCombos[nX][nES][nY]),aCombos[nX][nPT][nY],aCombos[nX][nES][nY])
+					aCombos[nX][nEN][nY]	:= IIF(Empty(aCombos[nX][nEN][nY]),aCombos[nX][nPT][nY],aCombos[nX][nEN][nY])
+				Next nY
+
+				//-- Limpo combos não preenchidos/usados
+				nY := 1
+				While nY <= Len(aCombos[nX][nLang])
+					If Empty(aCombos[nX][nLang][nY])
+						aDel(aCombos[nX][nLang],nY)
+						aSize(aCombos[nX][nLang],len(aCombos[nX][nLang])-1)
+					Else
+						nY++
+					EndIf
+				EndDo
+			EndIf
+
+			//-- Ajustes no default e valores salvos inválidos ----------------
+			If cGSC == 'C'
+				If 	&(aVarAux[nX][1]) > Len(aCombos[nX][nLang]) .Or. ;
+					&(aVarAux[nX][1]) < 1
+
+					If 	nPresel > Len(aCombos[nX][nLang]) .Or. ;
+						nPresel < 1
+						nPresel	:= 1
+					EndIf
+					&(aVarAux[nX][1])	:= nPresel
+				EndIf
+			EndIf
+
+			//-- Tamanho dinâmico dos campos ----------------------------------
+			nLrgMax	:= IIf(lBreakLine,230,130)
+			Do Case
+				Case cTipo == 'D'	; nLarg	:= 10 + _nEspIco
+				Case cGSC == 'C'	; aEval(aCombos[nX][nLang],{|x| nLarg := Max( Len(x) ,nLarg) })	//-- Espaço para o maior texto do combo
+				Case cTipo == 'N'	; nLarg	:= ( Len(Transform(0,cPict)) ) + _nEspIco				//-- Ajusta tamanho com a picture
+				Case cTipo == 'C'	; nLarg	:= ( Len(Transform(Space(nTamanho),cPict)) )			//-- Ajusta tamanho com a picture
+				Otherwise			; nLarg	:= nTamanho
+			EndCase
+			nLarg	:= Min( ( nLarg * _nTamCh ) , nLrgMax )					//-- Limita o tamanho máximo do campo
+			If cGSC == 'F'	; nLarg -= ( _nEspIco * _nTamCh ) 	; EndIf		//-- Desconta o espaço do ícone
+
+			//-- Montagem do Help ---------------------------------------------
+			Default uHelp	:= ''
+			If ValType(uHelp) == 'C'
+				If .Not. Empty(uHelp)
+					uHlpTmp	:= Ap5GetHelp(uHelp)	//-- Busco o Help Padrão
+					If .Not. Empty(uHlpTmp)
+						uHelp	:= {uHlpTmp}
+					EndIf
+				EndIf
+				If 	Empty(uHelp) .Or. ;
+					ValType(uHelp) == 'C'
+					uHelp	:= {uHelp}
+				EndIf
+			EndIf
+			If cGSC == 'R'
+				aAdd(uHelp,CRLF)
+				aAdd(uHelp,cHlpRange)
+			EndIf
+			aAdd(aHelp,uHelp)
+			aAdd(aHelp2,'')
+			aEval(aTail(aHelp),{|x| aTail(aHelp2) += x })
+
+			//-----------------------------------------------------------------
+			cVar 	:= aVarAux[nX][1]
+			cValid	:= ''
+			bValid	:= NIL
+			If ValType(uValid) == 'B'
+				bValid	:= uValid
+				cValid	:= GetCbSource(bValid)
+			ElseIf .Not. Empty(uValid)
+				bValid	:= MontaBlock('{|u| '+uValid+' }')
+				cValid	:= uValid
+			EndIf
+			aAdd(abValid,bValid)
+			aAdd(aValid,cValid)
+
+			If cGSC == 'R'		//-- Tipo Range!
+				bBlkGet := &("{|u| If( PCount() == 0, " + cVar + ", fsetVar(u))}")	//-- Uso assim para usar a função estática!
+			Else
+				bBlkGet := MontaBlock("{|u| If( PCount() == 0, " + cVar + "," + cVar + " := u)}")
+			EndIf
+
+			nLrgMax	:= IIf(lBreakLine,230,100)
+			tSay():New( nLinha+003, 3, MontaBlock("{|| '" + aTxtPerg[nX][nLang] + "' }"),oPrg,,oFonte,,,,.T.,,,nLrgMax,,,,,,)
+			If lBreakLine	
+				nLinha	+= _nIncLin
+				nCol	:= 003
+			Else			
+				nCol	:= nLrgMax+005
+			EndIf
+			bGotFocus	:= MontaBlock('{|| nPHelp := '+cValToChar(nX)+', oMemo:Refresh() }')
+			bHelp		:= MontaBlock('{|| ShowHelpCpo("'+cVar+'",aHelp['+cValToChar(nX)+'],7,{aValid['+cValToChar(nX)+']})}')
+			If cGSC == 'C'
+				oGet	:= tComboBox():New( nLinha,nCol,bBlkGet,aCombos[nX][nLang],nLarg,,oPrg,,,,,,.T.,oFonte,,.F.,/*bWhen*/,.T.,,,,cVar)
+				oGet:bGotFocus	:= bGotFocus
+				oGet:cTooltip	:= cVar
+				oGet:bHelp 		:= bHelp
+				If nX == 1		;	oGet1	:= oGet		;	EndIf
+			Else
+				oGet := tGet():New( nLinha,nCol,bBlkGet,oPrg,nLarg,,cPict,bValid,,,oFonte,,,.T.,,,/*bWhen*/,,,,,,,cVar,,,,.T.,,,"",2)
+				oGet:bGotFocus	:= bGotFocus
+				oGet:cTooltip	:= cVar
+				oGet:bHelp 		:= bHelp
+				If cGSC == 'F'	//-- File
+					bFile	:= &('{|| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'","'+cValToChar(nX)+'" )}')
+					tBitmap():New( nLinha+002,nCol+nLarg+001,008,008,"LUPA",,.T.,oPrg,bFile,,.F.,.T.,,,.F.,,.T.,,.F.)
+				Else
+					oGet:cF3 := cF3
+				EndIf
+				If nX == 1		;	oGet1	:= oGet		;	EndIf
+			EndIf
+			
+			nLinha	+= _nIncLin
+		Next nX
+		
+		//-- Montagem do quadro de help ---------------------------------------
+		If lHasHelp
+			bHelp	:= {|| aHelp2[nPHelp] }
+			oMemo := tMultiget():New((oDlgPerg:nWidth/2)-087,005,bHelp,oDlgPerg,260,40,oFonte;
+									,.T.,,,,.T.,,,,,,.T.,,,,,.T.)
+			oMemo:EnableVScroll(.T.)
+			oMemo:EnableHScroll(.T.)
+			//oMemo:Align := CONTROL_ALIGN_BOTTOM
+		EndIf
+
+		oDlgModal:bInit	:= {|| oGet1:SetFocus() }	//-- Foco no primeiro parãmetro
+		oDlgModal:Activate()
+	EndIf
+
+	If 	lOK 				//-- Salva parâmetros no profile do usuário
+		If lUseProf
+			sfSalvaPerg(ucPergunta,Len(aPergs))
+			oProfile:Destroy()
+			FreeObj(oProfile)
+		EndIf
+		//-- Salvo os valores atuais por causa da função VarUnref() que perde os valores
+		For nX := 1 to Len(aBkpVar)
+			aBkpVar[nX][2]	:= &(aBkpVar[nX][1])
+		Next nX
+	EndIf
+	
+	//-- Desincula as outras variáveis (ATENÇÃO PERDE OS VALORES)
+	For nX := 1 to Len(aVarAux)
+		If Len(aVarAux[nX]) > 1		; 	VarUnref( aVarAux[nX][2] )	; 	EndIf
+	Next nX
+
+	//-- Restauro valores das variáveis, se cancelou são os valores originais, se OK restauro por
+	// causa da função VarUnref() que perde os valores quando desfaz o vínculo
+	For nX := 1 to Len(aBkpVar)
+		&(aBkpVar[nX][1])	:= aBkpVar[nX][2]
+	Next nX
+
+Return lOK
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 05/05/2025
+Info		: Função para carregar as perguntas salvas no profile do usuário
+=================================================================================================*/
+Static Function sfCarregaPerg(	cPerg	AS Character;	//01 cPerg
+							,	nQtPerg	AS Numeric	; 	//02 nQtPerg
+							)
+	
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local aProfile									AS Array
+	Local nX										AS Numeric
+	
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR cPerg
+	ParamObr 1		VAR nQtPerg
+
+	oProfile:SetProgram(_NomeProg_)
+	oProfile:SetTask(cPerg)
+	oProfile:SetType('MV_PAR')
+	oProfile:Activate()
+	aProfile := oProfile:Load()
+
+	For nX := 1 to Min(Len(aProfile),nQtPerg)
+		&('MV_PAR'+StrZero(nX,2))	:= aProfile[nX]
+	Next nX
+
+	FwFreeArray(aProfile)
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 05/05/2025
+Info		: Função para salvar as perguntas no profile do usuário
+=================================================================================================*/
+Static Function sfSalvaPerg(cPerg	AS Character;	//01 cPerg
+						,	nPergs	AS Numeric	; 	//02 nQtPerg
+						)
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local aProfile	:= {}							AS Array
+	Local nX										AS Numeric
+	
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR cPerg
+	ParamObr 1		VAR nPergs
+
+	//-------------------------------------------------------------------------
+	For nX := 1 to nPergs
+		aAdd(aProfile,&('MV_PAR'+StrZero(nX,2)))
+	Next nX
+
+	oProfile:SetProgram(_NomeProg_)
+	oProfile:SetTask(cPerg)
+	oProfile:SetType('MV_PAR')
+	oProfile:Activate()
+	oProfile:SetProfile(aProfile)
+	oProfile:Save()
+	FwFreeArray(aProfile)
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 05/05/2025
+Info		: Inicializa lista de variáveis principais e adicionais
+=================================================================================================*/
+Static Function sfInitVar(	aPergs	AS Array	;	//01 aPergs
+						,	aVarAux	AS Array	;	//02 aVarAux
+						,	aBkpVar	AS Array	;	//03 aBkpVar
+						)
+	
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local cVar										AS Character
+	Local nLenPergs									AS Numeric
+	Local nX										AS Numeric
+	Local cVar01,cVar02,cVar03,cVar04,cVar05		AS Character
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR aPergs
+	ParamObr 1		VAR aVarAux
+	ParamObr 2		VAR aBkpVar
+
+	//-- Variáveis adicionais -------------------------------------------------
+	For nX := 1 to Len(aPergs)
+		nLenPergs	:=	Len(aPergs[nX])									//-- Obtem o tamanho do array da pergunta lida para posterior comparacao
+
+		cVar	:= 'MV_PAR'+StrZero(nX,2)
+		aAdd(aVarAux,{cVar})
+		aAdd(aBkpVar,{cVar,&(cVar)})									//-- Salva valores antes da abertura da tela, caso o usuário cancele restauro os valores
+
+		cVar01	:= If(nX1_VAR01 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR01]))
+		cVar02	:= If(nX1_VAR02 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR02]))
+		cVar03	:= If(nX1_VAR03 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR03]))
+		cVar04	:= If(nX1_VAR04 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR04]))
+		cVar05	:= If(nX1_VAR05 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR05]))
+		If 	.Not. Empty(cVar01) .And. ;
+			.Not. ( cVar01 == cVar )
+			aAdd(aTail(aVarAux),cVar01)
+			aAdd(aBkpVar,{cVar01, Iif(Type(cVar01)<>'U',&(cVar01),NIL) })	//-- Salva valores antes da abertura da tela, caso o usuário cancele restauro os valores
+		EndIf
+		If 	.Not. Empty(cVar02) .And. ;
+			.Not. ( cVar02 == cVar )
+			aAdd(aTail(aVarAux),cVar02)
+			aAdd(aBkpVar,{cVar02, Iif(Type(cVar02)<>'U',&(cVar02),NIL) })	//-- Salva valores antes da abertura da tela, caso o usuário cancele restauro os valores
+		EndIf
+	Next nX
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 05/05/2025
+Info		: Faz a verficação dos parâmetros carregados, tipo, tamanho, e inicializa se precisar
+=================================================================================================*/
+Static Function sfProcParam(aPergs	AS Array	;	//01 aPergs
+						,	aVarAux	AS Array	;	//02 aVarAux
+						)
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local nLenPergs									AS Numeric
+	Local nX										AS Numeric
+
+	Local cTipo										AS Character
+	Local nTamanho	, nDecimal	,nPresel			AS Numeric
+	Local cGSC		, cCnt01	,cCnt02				AS Character
+
+	Local xValue									AS Variant
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR aPergs
+	ParamObr 1		VAR aVarAux
+
+	//-- Variáveis adicionais -------------------------------------------------
+	For nX := 1 to Len(aPergs)
+		nLenPergs	:=	Len(aPergs[nX])									//-- Obtem o tamanho do array da pergunta lida para posterior comparacao
+
+		cTipo	:= aPergs[nX,nX1_TIPO]
+		nTamanho:= aPergs[nX,nX1_TAMANHO]	;	nDecimal	:= aPergs[nX,nX1_DECIMAL]	;	nPresel	:= aPergs[nX,nX1_PRESEL]
+		cGSC	:= aPergs[nX,nX1_GSC]
+		cCnt01	:= If(nX1_CNT01 	> nLenPergs,'',aPergs[nX,nX1_CNT01])	//-- Default campos padrões
+		cCnt02	:= If(nX1_CNT02  	> nLenPergs,'',aPergs[nX,nX1_CNT02])	//-- Default tipo Range!
+		
+		Default nPresel	:= 1
+		xValue	:= &(aVarAux[nX][1])
+		
+		//-- Inicializa valores ? se alterou de tamanho ou tipo
+		If 	cTipo <> ValType(xValue) .Or. ;
+			( cTipo == 'C' .And. Len(AllTrim(xValue)) > nTamanho )
+
+			Do Case
+				Case cTipo == 'C'	; xValue := IIf(cGSC=='R',cCnt02,cCnt01)
+				Case cTipo == 'N'	; xValue := IIf(cGSC=='C',nPresel,Val(cCnt01))
+				Case cTipo == 'D'	; xValue := CtoD(cCnt01)
+			EndCase
+			
+			&(aVarAux[nX][1])	:= xValue
+		EndIf
+		
+		If cTipo == 'C'			;	&(aVarAux[nX][1]) := PadR(xValue,nTamanho)	;	EndIf	//-- Ajusto o tamanho das strings
+
+		If Len(aVarAux[nX]) > 1	; 	VarRef( aVarAux[nX][2] , aVarAux[nX][1] )	;	EndIf 	//-- Vincula as outras variáveis ao endereço da atual, para alterar todas juntas (SÓ CONSEGUE VINCULAR UM PAR DE VARIÁVEIS!!!)
+	Next nX
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 14/06/2025
+Info		: Atualiza o conteúdo da variável de peguntas do tipo Range, baseado na função original
+				[PONM110.PRW]. Ajustado para acrescentar ; se não tiver antes de adicionar
+=================================================================================================*/
+Static Function fSetVar(u)
+	
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local cVar		:= ReadVar()					AS Character
+	Local cConteudo	:= ""							AS Character
+	Local nTam		:= 0							AS Numeric
+	Local cContAux, cAux	:= ""					AS Character
+	Static nConts	:= 0							AS Numeric
+	
+	//-------------------------------------------------------------------------
+	cAux	:= &cVar
+	nTam	:= Len(cAux)
+	If .Not. FwIsInCallStack("GetLKRet") //-- Quando chamado pelo F3 a função é executada 2X, por isso o controle é necessário
+		&cVar := Left(AllTrim(u) + Space(nTam), nTam)
+	ElseIf ++nConts  == 1
+		cAux	:= AllTrim(cAux)
+		If 	.Not. Empty(cAux) .And. ;	//-- Acrescento um ponto e vírgula se não tinha (DIGITADO PELO USUÁRIO)
+			Right(cAux,1) <> ';'
+			
+			cAux += ';'
+		EndIf
+		&cVar	:= Left(cAux + AllTrim(u) + ";" + Space(nTam), nTam)
+	Else
+		nConts := 0
+	EndIf
+	
+Return &cVar
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 05/05/2025
+Info		: Função para abrir tela de seleção de arquivos
+=================================================================================================*/
+Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
+						,	cMascara	AS Character;	//02 cMascara
+						,	cDirInicial	AS Character;	//03 cDirInicial
+						,	lAbrir		AS Logical	;	//04 lAbrir
+						,	lServer		AS Logical	;	//05 lServer
+						,	cVar		AS Character; 	//06 cVar	
+						,	nPosVar		AS Character;	//07 nPosVar
+						)
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local cRet , cTit							AS Character
+	Local cBakVar	:= ReadVar()				AS Character
+	Local bValid								AS CodeBlock
+	Local uVlrVar	:= &('M->'+cVar)			AS Variant
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	Default nOpcoes	:= 0
+
+	//-------------------------------------------------------------------------
+	If BitAnd(nOpcoes,GETF_RETDIRECTORY)	;	cTit	:= 'Selecione o diretório'
+	Else									;	cTit	:= 'Selecione o arquivo'
+	EndIf
+
+	cRet	:= sfGetFile(	cMascara		;	//01 cMascara
+						,	cTit			;	//02 cTitulo
+						,	/*nMascPadrao*/	;	//03 nMascPadrao
+						,	cDirInicial		;	//04 cDirInicial (def '')
+						,	lAbrir			;	//05 lAbrir (def .F.)
+						,	nOpcoes			;	//06 nOpcoes (def 0)
+						,	lServer			;	//07 lServer (def .T.)
+						,	/*lKeepCase*/	;	//08 lKeepCase (def .F.)
+						)
+	
+	//-- Valida se o arquivo existe
+	If 	.Not. Empty(cRet) .And. ;
+		lAbrir
+		
+		If BitAnd(nOpcoes,GETF_RETDIRECTORY)
+			If .Not. ExistDir(cRet)
+				Help('',1,_MsgLinha_,,'Diretório selecionado NÃO existe.'+CRLF+;
+						cRet,1,,,,,,,{'SELECIONE UM DIRETÓRIO VÁLIDO'})
+				cRet	:= ''
+			EndIf
+		Else
+			If .Not. File(cRet)
+				Help('',1,_MsgLinha_,,'Arquivo selecionado NÃO existe.'+CRLF+;
+						cRet,1,,,,,,,{'SELECIONE UM ARQUIVO VÁLIDO'})
+				cRet	:= ''
+			EndIf
+		EndIf
+	EndIf
+	
+	//-- Validação normal do parâmetro
+	If .Not. Empty(cRet)
+		__ReadVar	:= 'M->'+cVar
+		&(ReadVar()):= cRet
+		bValid	:= abValid[nPosVar]
+		If Empty(bValid)		;	bValid	:= {|| AllwaysTrue() }		;	EndIf
+		If .Not. eVal(bValid)	;	&(ReadVar())	:= uVlrVar			; 	EndIf	//-- Valida os dados, se Falso restaura o conteúdo
+	EndIf
+
+	__ReadVar	:= cBakVar
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 13/03/2020 [v3.0]
+Info		: Função para substituir o cGetFile padrão, de forma tratar a nova função tFileDialog 
+				na release 25
+/*========+===============+========================================================================
+   Data   | Responsável   | Manutenção Efetuada
+==========+===============+========================================================================
+ 05/04/21 | Cirilo Rocha  | Pequena revisão
+ 12/10/21 | Cirilo Rocha  | Pequena revisão (release 33)
+ 17/04/22 | Cirilo Rocha  | Adequação para o SmartClient Webapp
+ 14/12/22 | Cirilo Rocha  | Melhoria para salvar o diretório inicial
+ 03/05/25 | Cirilo Rocha  | Alinhamento com o 5º parâmetro da função padrão era para ser lAbrir, 
+          |               |  estava documentado errado
+          |               | Melhores tratamentos para WebApp
+ 11/06/25 | Cirilo Rocha  | Pequena revisão no fonte
+          |               | 
+==========+===============+======================================================================*/
+Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
+						,	cTitulo		AS Character;	//02 cTitulo
+						,	nMascPadrao	AS Numeric	;	//03 nMascPadrao
+						,	cDirInicial	AS Character;	//04 cDirInicial (def '')
+						,	lAbrir		AS Logical	;	//05 lAbrir (def .F.)
+						,	nOpcoes		AS Numeric	;	//06 nOpcoes (def 0)
+						,	lServer		AS Logical	;	//07 lServer (def .T.)
+						,	lKeepCase	AS Logical	;	//08 lKeepCase (def .F.)
+						)							AS Character
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local uRet          							AS Variant
+	Local aMasc										AS Array
+	Local nX										AS Numeric
+	Local cMascProc									AS Variant
+	Local cTemp										AS Character
+	Local cSession	:= FunName()					AS Character
+	Local cDrive,cDir,cFile,cExten					AS Character
+	
+	//-- Parâmetros da Rotina -------------------------------------------------
+    Default cDirInicial	:= ''
+    Default lAbrir		:= .F.
+    Default lServer		:= .T.
+    Default lKeepCase	:= .F.
+
+    //-------------------------------------------------------------------------
+	cDir	:= fwGetProfString(cSession,"CGETFILE",cDirInicial,.T.)
+	If ExistDir(cDir)	;	cDirInicial	:= cDir		;	EndIf
+
+	//-------------------------------------------------------------------------
+	If  .Not. lServer .And. ;
+        (ValType(nOpcoes) == 'U' .Or. BitAnd(nOpcoes,GETF_NETWORKDRIVE) )
+		//GetRemoteType() <> REMOTE_HTML 	.And. ; //Não pode ser via webapp		//-- JÁ FUNCIONA NO WEBAPP
+		
+        If BitAnd(nOpcoes,GETF_RETDIRECTORY)
+            cMascProc   := NIL
+            lAbrir     	:= .T.  //-- Para diretórios essa função sempre precisa ser Abrir!
+        Else
+            cMascProc	:= ''	//-- FAZ CONVERSÃO DO FORMATO DE MÁSCARA DO CGETFILE P/ TFILEDIALOG
+			//"All files (*.*) | All Text files (*.txt) "		tFileDialog
+			//*.txt|*.txt	cGetFile
+            If 	ValType(cMascara) == 'C' .And. ;
+				.Not. Empty(cMascara)
+
+                aMasc		:= StrTokArr2(cMascara,'|')
+                For nX := 1 to Len(aMasc) Step 2
+					If nX <> 1				;	cMascProc	+= ' | '	;	EndIf
+
+                    If Empty(aMasc[nX])		;	cMascProc   += "Arquivo"
+                    Else                    ;	cMascProc	+= AllTrim(aMasc[nX])
+                    EndIf
+                    
+					cTemp	:= ''
+					If 		nX+1 <= Len(aMasc)			;	cTemp	:= '('+aMasc[nX+1]+')'
+                    ElseIf 	.Not. ( '*.' $ cMascProc )	;	cTemp	:= '(*.*)'
+                    EndIf
+					If 	.Not. Empty(cTemp) .And. ;
+						.Not. ( Right(cMascProc,Len(cTemp)) == cTemp )
+
+						cMascProc	+= ' '+cTemp
+					EndIf
+                Next nX
+            EndIf
+        EndIf
+
+		If Empty(cMascProc)
+			cMascProc	:= 'Todos os Arquivos (*.*)'
+		EndIf
+		
+		uRet    := tFileDialog( cMascProc	;	//01 cMascara
+							,	cTitulo		;	//02 cTitulo
+							,	nMascPadrao	;	//03 nDef
+							,	cDirInicial	;	//04 cDirInicial
+							,	.Not.lAbrir	;	//05 lSalvar
+							,	nOpcoes	    ;	//06 nOpcoes
+							)
+
+        If .Not. lKeepCase		;	uRet    := Lower(uRet)	;	EndIf
+        If  .Not. Empty(uRet) .And. ;
+            BitAnd(nOpcoes,GETF_RETDIRECTORY) .And. ;
+            .Not. (Right(uRet,1) $ '\/')
+
+			uRet	:= IIf(GetRemoteType() == REMOTE_QT_LINUX,'/','\')
+        EndIf
+    Else
+		uRet    := cGetFile(cMascara	;	//01 cMascara
+						,	cTitulo		;	//02 cTitulo
+						,	nMascPadrao	;	//03 nMascPadrao
+						,	cDirInicial	;	//04 cDirInicial
+						,	lAbrir		;	//05 lAbrir		//ATENÇÃO!
+						,	nOpcoes		;	//06 nOpcoes
+						,	lServer		;	//07 lServer (def .T.)
+						,	lKeepCase	;	//08 lKeepCase
+						)
+	EndIf
+
+	//-- Tratamento de erros para WebApp (pode não ser necessário no futuro)
+	If 	.Not. BitAnd(nOpcoes,GETF_MULTISELECT) .And. ;
+		.Not. Empty(uRet)
+
+		SplitPath( uRet, @cDrive, @cDir, @cFile, @cExten )
+		If BitAnd(nOpcoes,GETF_RETDIRECTORY)		//-- Diretórios
+			If .Not. ExistDir(uRet)
+				FwAlertError('Diretório informado '+uRet+' NÃO existe.',_MsgLinha_)
+				uRet	:= ''
+			EndIf		
+		ElseIf .Not. Empty(uRet)					//-- Arquivos
+			If Empty(cFile)
+				FwAlertError('Nenhum nome de arquivo informado.',_MsgLinha_)
+				uRet	:= ''
+			ElseIf 	lAbrir .And. ;
+					.Not. File(uRet)				//-- Valida se arquivo existe
+				FwAlertError('Arquivo informado '+uRet+' NÃO existe.',_MsgLinha_)
+				uRet	:= ''
+			EndIf
+		EndIf
+	EndIf
+
+	//-- Salva o diretório atual que o usuário utilizou -----------------------
+	If .Not. Empty(uRet)
+		SplitPath( uRet,@cDrive,@cDir,/*@cFile*/,/*@cExt*/ )
+		fwWriteProfString(cSession,"CGETFILE",cDrive+cDir,.T.) //Guarda o diretório atual
+	EndIf
+
+Return uRet
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 20/05/2024
+Info		: Monta máscara numérica
+=================================================================================================*/
+Static Function sfMascNum(	nTam	AS Numeric	;	//01 nTam
+						,	nDec	AS Numeric	;	//02 nDec
+						)							AS Character
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local cMascara									AS Character
+	Local nTamInt									AS Numeric
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR nTam
+	ParamObr 1		VAR nDec
+
+	nTamInt	:= (nTam-nDec)-IIf(nDec>0,1,0)+1	//-- +1 do negativo, e -1 se tem vírgula/decimal
+	cMascara	:= '@E '+Right('999,999,999,999,999,999', (nTamInt+Int((nTamInt-1)/3)) )
+	If nDec > 0		;	cMascara += "."+Replicate("9",nDec)		;	EndIf
+
+Return cMascara
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 13/06/2025
+Info		: Faz o parser dos parâmetros de usuário convertendo em comandos SQL ou ADPL, de modo
+				análogo as funções padrão MakeSqlExpr() e MakeAdvplExpr()
+=================================================================================================*/
+User Function CXMakeExp(	aPergs	AS Array	;	//01 aPergs
+						,	lSQL	AS Logical	; 	//02 lSQL
+						)
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local aBetWeen									AS Array
+	Local aListIN									AS Array
+	Local cExpressao	:= ''						AS Character
+	Local cExpAux		:= ''						AS Character
+	Local cChTab		:= Char(9)					AS Character
+	Local cVlrPar									AS Character
+	Local cVar, cVarAux, cCpo						AS Character
+	Local nX,nY										AS Numeric
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR aPergs
+	ParamObr 1		VAR lSQL
+
+	//-------------------------------------------------------------------------
+	For nX := 1 to Len(aPergs)
+		If 	aPergs[nX,nX1_GSC] == 'R' .And. ;
+			Len(aPergs[nX]) >= nX1_CNT01 .And. ;
+			.Not. Empty(aPergs[nX][nX1_CNT01])
+
+			cCpo	:= RTrim(aPergs[nX][nX1_CNT01])
+			cVar	:= 'MV_PAR'+StrZero(nX,2)
+			cVlrPar	:= RTrim( &(cVar) )
+			If Empty(cVlrPar)
+				If lSQL
+					cExpressao	:= ' ( 1 = 1 ) /*-- '+cCpo+' SEM FILTRO --*/'+CRLF
+				Else
+					cExpressao	:= ' AllwaysTrue() '
+				EndIf
+			Else
+				sfParserParam(	aPergs[nX]	;	//01 aPergs
+							,	cVlrPar		;	//02 cVlrPar
+							,	@aBetWeen	;	//03 @aBetWeen
+							,	@aListIN	; 	//04 @aListIN
+						)
+
+				//-- Cria expressão do IN
+				If .Not. Empty(aListIN)
+					If lSQL
+						cExpressao	:= cCpo + " IN ('"+FWAToS(aListIN,"','")+"') "+CRLF
+					Else
+						cExpressao	:= cCpo + ' $ "'+"'"+FWAToS(aListIN,"','")+"'"+'"'
+					EndIf
+				EndIf
+
+				//-- Cria expressão do BetWeen
+				If .Not. Empty(aBetWeen)
+					cExpAux	:= ''
+					For nY := 1 to Len(aBetWeen)
+						If lSQL
+							cExpAux	+= IIf( Empty(cExpAux) , cChTab , cChTab + 'OR' + cChTab )
+							cExpAux	+= cCpo + " BETWEEN '"+aBetWeen[nY][1]+"' AND '"+aBetWeen[nY][2]+"' "+CRLF
+						Else
+							cExpAux	+= IIf( Empty(cExpAux) , '' , ' .OR. ' )
+							cExpAux	+= '(' + cCpo + " >= '"+aBetWeen[nY][1]+"' .AND. "+cCpo+" <= '"+aBetWeen[nY][2]+"' )"
+						EndIf
+					Next nY
+
+					If Empty(cExpressao)
+						cExpressao	:= cChTab + cExpAux
+					Else
+						If lSQL
+							cExpressao	:= cChTab + cChTab + cExpressao + cChTab + 'OR' + cExpAux + ' '+CRLF
+						Else
+							cExpressao	:= cExpressao + ' .OR. '+cExpAux
+						EndIf
+					EndIf
+				EndIf
+			EndIf
+			&(cVar)	:= cExpressao
+
+			//-- Preenche também as outras variáveis vinculadas
+			cVarAux	:= If(nX1_VAR01 > Len(aPergs[nX]),'',AllTrim(aPergs[nX,nX1_VAR01]))
+			If 	.Not. Empty(cVarAux) .And. ;
+				.Not. ( cVarAux == cVar )
+				
+				&(cVarAux)	:= cExpressao
+			EndIf
+
+			//-- Preenche também as outras variáveis vinculadas
+			cVarAux	:= If(nX1_VAR02 > Len(aPergs[nX]),'',AllTrim(aPergs[nX,nX1_VAR02]))
+			If 	.Not. Empty(cVarAux) .And. ;
+				.Not. ( cVarAux == cVar )
+				
+				&(cVarAux)	:= cExpressao
+			EndIf
+		EndIf
+	Next nX
+
+Return
+
+/*=================================================================================================
+Autor		: Cirilo Rocha
+Data		: 13/06/2025
+Info		: Faz o parser dos parâmetros do tipo RANGE, convertendo em dois arrays, um para os
+				BetWeens e outro INs
+			Ex.: '000001-01'-'000004-09';000006;0000008-'000009-08';000010-000011;000012
+=================================================================================================*/
+Static Function sfParserParam(	aPergs		AS Array	;	//01 aPergs
+							,	cVlrPar		AS Character;	//02 cVlrPar
+							,	aBetWeen	AS Array	;	//03 @aBetWeen
+							,	aListIN		AS Array	; 	//04 @aListIN
+							)
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local cChar, cValor								AS Character
+	Local cChAspa		:= Chr(39)					AS Character
+	Local lEntreAspas	:= .F.						AS Logical
+	Local lBetWeen		:= .F.						AS Logical
+	Local nX										AS Numeric
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamObr 0		VAR aPergs
+	ParamObr 1		VAR cVlrPar
+
+	//-------------------------------------------------------------------------
+	aBetWeen	:= {}
+	aListIN		:= {}
+
+	If 	.Not. Empty(cVlrPar) .And. ;	//-- Acrescento o fechamento, caso não tenha
+		Right(cVlrPar,1) <> ';'
+
+		cVlrPar	+= ';'
+	EndIf
+
+	For nX := 1 to Len(cVlrPar)
+		cChar	:= SubStr(cVlrPar,nX,1)
+		If cChar == cChAspa
+			lEntreAspas	:= .Not. lEntreAspas
+		Else
+			If .Not. lEntreAspas
+				If	cChar == ';'
+					If lBetWeen		;	aAdd(aTail(aBetWeen),cValor)
+					Else			;	aAdd(aListIN,cValor)
+					EndIf
+					lBetWeen	:= .F.
+					cValor		:= ''
+					cChar		:= ''
+				ElseIf	cChar == '-'
+					aAdd(aBetWeen,{cValor})
+					lBetWeen	:= .T.
+					cValor		:= ''
+					cChar		:= ''
+				EndIf
+			EndIf
+			cValor	+= cChar
+		EndIf
+	Next nX
+
+Return
+
+//#################################################################################################
+// ######  ######   ####   ######  ######   ####          ##     ######  ##  ##
+//   ##    ##      ##        ##    ##      ##            ##      ##       ####
+//   ##    ####     ####     ##    ####     ####        ##       ####      ##
+//   ##    ##          ##    ##    ##          ##      ##        ##       ####     ##   
+//   ##    ######   ####     ##    ######   ####      ##         ######  ##  ##    ## 
+//#################################################################################################
+
+// ###################### FUNÇÃO TEMPORÁRIA SÓ PARA TESTES ##########################################
+//User Function CXTeste2()
+//
+//	//-- Declaração de Variáveis ----------------------------------------------
+//	Private cPerg	:= _NomeProg_+'A'				AS Character
+//	Private aPergs	:= {}							AS Array
+//	
+//	//-- Variáveis relacionadas aos parâmetros
+//	Private cFiliais	/*MV_PAR01*/				AS Character
+//	Private dEmissao	/*MV_PAR02*/				AS Date
+//	Private nValor1		/*MV_PAR03*/				AS Numeric
+//
+//	If Select('SX3') == 0
+//		FWMsgRun(,{|| RPCSetEnv('99','01','admin','adm')},'carregando ambiente','aguarde...')
+//		__cInterNet	:= NIL	//Para mostrar as mensagens ao usuario, usar apenas quando a funcao for utililizada com interface
+//		lMsHelpAuto := .F.	//Preciso colocar aqui para forçar mostrar mensagens
+//	EndIf
+//
+//	aPergs	:= sfVldPrg()			//-- Carrega array com as perguntas
+//
+//	If .Not. U_CXPergunte ( cPerg , .T. ,_MsgLinha_+' - Informe os parâmetros de filtro',,,,aPergs )
+//		Return
+//	EndIf	
+//	
+//	U_CXMakeExp(aPergs,.T./*lSQL*/)	//-- Converte os parâmetros tipo RANGE em expressão SQL ou ADVPL
+//
+//Return
+//
+////-------------------------------------------------------------------------------------------------
+///*/{Protheus.doc} sfVldPrg
+//@description	Função responsável carregar o array com as perguntas
+//@autor			Cirilo Rocha
+//@since			16/08/2025
+///*/
+////-------------------------------------------------------------------------------------------------
+//Static Function sfVldPrg()							AS Array
+//
+//	//-- Declaração de Variáveis ----------------------------------------------
+//	Local aPergs	:= {}							AS Array
+//
+//	// 01 /02 /03     /04     /05     /06      /07  /08     /09     /10    /11 /12   /13   /14   /15   /16   /17   /18   /19   /20   /21   /22   /23   /24   /25   /26   /27   /28   /29   /30   /31   /32   /33   /34   /35   /36   /37   /38/39  /40 /41 /42
+//	// Grp/Ord/Desc.Pt/Desc.Es/Desc.En/Variavel/Tipo/Tamanho/Decimal/Presel/GSC/Valid/Var01/Def1P/Def1E/Def1I/Cnt01/Var02/Def2P/Def2E/Def2I/Cnt02/Var03/Def3P/Def3E/Def3I/Cnt03/Var04/Def4P/Def4E/Def4I/Cnt04/Var05/Def5P/Def5E/Def5I/Cnt05/F3/Pyme/SXG/Hlp/Pict
+//
+//	//               03                     07 08 09 11  12              14    17            18   22  24     29     34     38      41  42
+//	//			    Descrição               Tp Tm Dc GCS Validacao       D1    Cnt1          D2  Cnt2 D3     D4     D5     F3      Hlp   Pic
+//	aAdd(aPergs,{,,'Filiais ?'			,,,,'C',90,0,,'R','NaoVazio()'	,'cFiliais','',,,'RA_FILIAL'	,,'',,,'',,'',,,,,'',,,,,'',,,,'XM0',,,'.RHFILIAL.'})	//RANGE
+//	aAdd(aPergs,{,,'Admissão de ?'		,,,,'D',08,0,,'G',''			,'dEmissao','',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMDE.'})
+//	aAdd(aPergs,{,,'Linha Produção ?'	,,,,'C',02,0,,'G','NaoVazio().And.ExistCpo("ZD0")'	,'cCodPla','',,,''	,,'',,,'',,'',,,,,'',,,,,'',,,,'ZD0',,,})
+//	aAdd(aPergs,{,,'Valor ?'			,,,,'N',08,2,,'G',{|| U_VLd1()}	,,'',,,''			,'nValor1','',,,  ,,'',,,,,'',,,,,'',,,,'','',,''})
+//	aAdd(aPergs,{,,'123456789*123456789*123456789*123456'	,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Ano / Mês'			,,,,'C',06,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'','@R 9999 / 99'})
+//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',100,0,,'F','U_VLd1()'			,,GETF_LOCALHARD,,,''			,,'*.csv',,,  ,,'C:\Protheus\',,,,,.T.,,,,,.F.,,,,'','',,{'HELP DO CAMPO'}})
+//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',100,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,{'HELP DO CAMPO'}})
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Categorias ?'		,,,,'C',15,0,,'G','fcategoria()',,'',,,'ACDEGHIMPST',,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHCATEG.'})
+//	aAdd(aPergs,{,,'Situações ?'		,,,,'C',05,0,,'G','fSituacao()' ,,'',,,' ADFT'		,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHSITUA.'})
+//	aAdd(aPergs,{,,'Informações De ?'	,,,,'N',01,0,3,'C',''			,,'Ass Médica',,,,,'Ass Odontológica',,,,,'Ambas',,,,,'',,,,,'',,,,,,,''})	//COMBO
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//
+//Return aPergs
+//
+//user Function VLd1()
+//
+//Return FwAlertYesNo(	'validação U_VLd1() '+cValToChar(&(Readvar())),_MsgLinha_)
