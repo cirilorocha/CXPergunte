@@ -5,7 +5,7 @@
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
-Data		: 30/09/2025 v1.20
+Data		: 03/10/2025 v1.25
 Consultoria	: CX Consultoria
 Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -63,7 +63,7 @@ Static nX1_PICTURE	:=	42
 #Define _LINHA_			StrZero(ProcLine(),5)
 #Define _MsgLinha_		_NomeProg_+'('+_LINHA_+')'
 
-#Define _nIncLin		15
+#Define _nIncLin		16
 #Define _nEspIco		03
 #Define _nTamCh			04
 
@@ -94,7 +94,6 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local aVarAux	:= {}							AS Array
 	Local aBkpVar	:= {}							AS Array
 	Local aTxtPerg	:= {}							AS Array
-	Local aCombos	:= {}							AS Array
 	Local cTab		:= 'SX1'						AS Character
 	Local cHlpRange									AS Character
 	Local cLang		:= FwRetIdiom() 				AS Character	//-- Retorna o idioma selecionado
@@ -105,11 +104,14 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local oFonte									AS Object
 	Local oGet1										AS Object
 	Local lOK		:= .F.							AS Logical
+	Local lTemHelp	:= .F.							AS Logical
 	Local nLinha	:= 005							AS Numeric
 	Local nX,nY										AS Numeric
 	Local nLenPergs									AS Numeric
 	Local nLang										AS Numeric
+	Local nAlt										AS Numeric
 	Local nLarg										AS Numeric
+	Local nAltPad	:= 15							AS Numeric
 	Local nLrgMax									AS Numeric
 	Local nCol										AS Numeric
 	Local uHlpTmp									AS Variant
@@ -137,12 +139,14 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local cValid									AS Character
 	Local uValid									AS Variant
 	
-	Private aValid	:= {}							AS Array
-	Private abValid	:= {}							AS Array
-	Private aHelp	:= {}							AS Array
-	Private aHelp2	:= {}							AS Array
-	Private nPHelp	:= 01							AS Numeric
-	Private oProfile,oMemo							AS Object
+	//-- Variáveis internas de controle
+	Private __aCombos	:= {}						AS Array
+	Private __aValid	:= {}						AS Array
+	Private __abValid	:= {}						AS Array
+	Private __aHelp		:= {}						AS Array
+	Private __aHelp2	:= {}						AS Array
+	Private __nPHelp	:= 01						AS Numeric
+	Private __oProfile, __oMemo						AS Object
 	
 	//-- Tratamento de conflito com a CXPergunta ------------------------------
 	If ValType(ucPergunta) == 'A'
@@ -215,7 +219,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 	//-- Carrega perguntas salvas no profile do usuário -----------------------
 	If lUseProf
-		oProfile	:= FwProfile():New()
+		__oProfile	:= FwProfile():New()
 		sfCarregaPerg(ucPergunta,Len(aPergs))
 	EndIf
 
@@ -226,6 +230,22 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 	//-- Criação da tela ------------------------------------------------------
 	If ulAsk
+		
+		If lHasHelp
+			For nX := 1 to Len(aPergs)
+				uHelp	:= If(nX1_HELP > Len(aPergs),NIL,aPergs[nX,nX1_HELP])
+				If 	( ValType(uHelp) $ 'A/C' .And. .Not. Empty(uHelp) ) .Or. ;
+					aPergs[nX][nX1_GSC] == 'R'	//-- Range sempre tem help
+					
+					lTemHelp	:= .T.
+					Exit
+				EndIf
+			Next nX
+			If .Not. lTemHelp
+				lHasHelp	:= .F.
+			EndIf
+		EndIf
+
 		cHlpRange	:= 	"Para definir intervalos de dados sequenciais, utilize hífen (1-3) e para os não "+;
 						"sequenciais, ponto e vírgula (3;5;1). Utilizar aspas simples para desconsiderar "+;
 						"hifens nos conteúdos. Exemplo: '000001-01'-'000004-09';000006;0000008-'000009-08'"
@@ -234,14 +254,13 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 		oDlgModal	:= FWDialogModal():New()
 		oDlgModal:SetEscClose(.T.)
 		oDlgModal:setTitle(ucTitle)
-		oDlgModal:setSize(270,270)
+		nAlt	:= Len(aPergs)*_nIncLin+60+IIf(lHasHelp,45,00)
+		nAlt	:= Min(nAlt,270)
+		oDlgModal:setSize(nAlt,270)
 		oDlgModal:createDialog()
-		//oDlgModal:addCloseButton({|| lOK := .T., oDlgModal:oOwner:End()}, 'OK')
-		oDlgModal:AddButton('OK'		 ,{||lOK := .T., oDlgModal:oOwner:End() },'OK',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
-		oDlgModal:AddButton('Cancelar',{|| oDlgModal:oOwner:End() },'Cancelar',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
 		oDlgPerg	:= oDlgModal:getPanelMain()
 
-		oPnl := tGroup():New( 001,005, (oDlgPerg:nWidth/2)-IIf(lHasHelp,90,45), (oDlgPerg:nHeight/2)+40,, oDlgPerg,,,.T., )
+		oPnl := tGroup():New( 001,005, (oDlgPerg:nHeight/2)-IIf(lHasHelp,45,00), (oDlgPerg:nWidth/2)-05,, oDlgPerg,,,.T., )
 
 		//-- Cria objeto Scroll
 		oPrg := tScrollArea():New(oPnl,001,001,150,250)
@@ -249,7 +268,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 		For nX := 1 To Len(aPergs)
 			aAdd(aTxtPerg,Array(3))
-			aAdd(aCombos,Array(3,5))
+			aAdd(__aCombos,Array(3,5))
 
 			nLenPergs	:=	Len(aPergs[nX])			//-- Obtem o tamanho do array da pergunta lida para posterior comparacao
 
@@ -280,25 +299,25 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	//		cVar05	:= If(nX1_VAR05  	> nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR05]))
 
 			If cGSC == 'C'
-				aCombos[nX][nPT][1]	:= If(nX1_DEF01  	> nLenPergs,'',aPergs[nX,nX1_DEF01])
-				aCombos[nX][nES][1]	:= If(nX1_DEFSPA1	> nLenPergs,'',aPergs[nX,nX1_DEFSPA1])
-				aCombos[nX][nEN][1]	:= If(nX1_DEFENG1	> nLenPergs,'',aPergs[nX,nX1_DEFENG1])
+				__aCombos[nX][nPT][1]	:= If(nX1_DEF01  	> nLenPergs,'',aPergs[nX,nX1_DEF01])
+				__aCombos[nX][nES][1]	:= If(nX1_DEFSPA1	> nLenPergs,'',aPergs[nX,nX1_DEFSPA1])
+				__aCombos[nX][nEN][1]	:= If(nX1_DEFENG1	> nLenPergs,'',aPergs[nX,nX1_DEFENG1])
 				
-				aCombos[nX][nPT][2]	:= If(nX1_DEF02  	> nLenPergs,'',aPergs[nX,nX1_DEF02])
-				aCombos[nX][nES][2]	:= If(nX1_DEFSPA2	> nLenPergs,'',aPergs[nX,nX1_DEFSPA2])
-				aCombos[nX][nEN][2]	:= If(nX1_DEFENG2	> nLenPergs,'',aPergs[nX,nX1_DEFENG2])
+				__aCombos[nX][nPT][2]	:= If(nX1_DEF02  	> nLenPergs,'',aPergs[nX,nX1_DEF02])
+				__aCombos[nX][nES][2]	:= If(nX1_DEFSPA2	> nLenPergs,'',aPergs[nX,nX1_DEFSPA2])
+				__aCombos[nX][nEN][2]	:= If(nX1_DEFENG2	> nLenPergs,'',aPergs[nX,nX1_DEFENG2])
 				
-				aCombos[nX][nPT][3]	:= If(nX1_DEF03  	> nLenPergs,'',aPergs[nX,nX1_DEF03])
-				aCombos[nX][nES][3]	:= If(nX1_DEFSPA3	> nLenPergs,'',aPergs[nX,nX1_DEFSPA3])
-				aCombos[nX][nEN][3]	:= If(nX1_DEFENG3	> nLenPergs,'',aPergs[nX,nX1_DEFENG3])
+				__aCombos[nX][nPT][3]	:= If(nX1_DEF03  	> nLenPergs,'',aPergs[nX,nX1_DEF03])
+				__aCombos[nX][nES][3]	:= If(nX1_DEFSPA3	> nLenPergs,'',aPergs[nX,nX1_DEFSPA3])
+				__aCombos[nX][nEN][3]	:= If(nX1_DEFENG3	> nLenPergs,'',aPergs[nX,nX1_DEFENG3])
 				
-				aCombos[nX][nPT][4]	:= If(nX1_DEF04  	> nLenPergs,'',aPergs[nX,nX1_DEF04])
-				aCombos[nX][nES][4]	:= If(nX1_DEFSPA4	> nLenPergs,'',aPergs[nX,nX1_DEFSPA4])
-				aCombos[nX][nEN][4]	:= If(nX1_DEFENG4	> nLenPergs,'',aPergs[nX,nX1_DEFENG4])
+				__aCombos[nX][nPT][4]	:= If(nX1_DEF04  	> nLenPergs,'',aPergs[nX,nX1_DEF04])
+				__aCombos[nX][nES][4]	:= If(nX1_DEFSPA4	> nLenPergs,'',aPergs[nX,nX1_DEFSPA4])
+				__aCombos[nX][nEN][4]	:= If(nX1_DEFENG4	> nLenPergs,'',aPergs[nX,nX1_DEFENG4])
 				
-				aCombos[nX][nPT][5]	:= If(nX1_DEF05  	> nLenPergs,'',aPergs[nX,nX1_DEF05])
-				aCombos[nX][nES][5]	:= If(nX1_DEFSPA5	> nLenPergs,'',aPergs[nX,nX1_DEFSPA5])
-				aCombos[nX][nEN][5]	:= If(nX1_DEFENG5	> nLenPergs,'',aPergs[nX,nX1_DEFENG5])
+				__aCombos[nX][nPT][5]	:= If(nX1_DEF05  	> nLenPergs,'',aPergs[nX,nX1_DEF05])
+				__aCombos[nX][nES][5]	:= If(nX1_DEFSPA5	> nLenPergs,'',aPergs[nX,nX1_DEFSPA5])
+				__aCombos[nX][nEN][5]	:= If(nX1_DEFENG5	> nLenPergs,'',aPergs[nX,nX1_DEFENG5])
 			ElseIf cGSC == 'F'
 				nOpcoes		:= If(nX1_DEF01  	> nLenPergs,GETF_LOCALHARD,aPergs[nX,nX1_DEF01])
 				cMascara	:= If(nX1_DEF02  	> nLenPergs,'',aPergs[nX,nX1_DEF02])
@@ -322,16 +341,16 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 			If cGSC == 'C'			//-- Mult Escolha / Combo
 				For nY := 1 to 5
-					aCombos[nX][nES][nY]	:= IIF(Empty(aCombos[nX][nES][nY]),aCombos[nX][nPT][nY],aCombos[nX][nES][nY])
-					aCombos[nX][nEN][nY]	:= IIF(Empty(aCombos[nX][nEN][nY]),aCombos[nX][nPT][nY],aCombos[nX][nEN][nY])
+					__aCombos[nX][nES][nY]	:= IIF(Empty(__aCombos[nX][nES][nY]),__aCombos[nX][nPT][nY],__aCombos[nX][nES][nY])
+					__aCombos[nX][nEN][nY]	:= IIF(Empty(__aCombos[nX][nEN][nY]),__aCombos[nX][nPT][nY],__aCombos[nX][nEN][nY])
 				Next nY
 
 				//-- Limpo combos não preenchidos/usados
 				nY := 1
-				While nY <= Len(aCombos[nX][nLang])
-					If Empty(aCombos[nX][nLang][nY])
-						aDel(aCombos[nX][nLang],nY)
-						aSize(aCombos[nX][nLang],len(aCombos[nX][nLang])-1)
+				While nY <= Len(__aCombos[nX][nLang])
+					If Empty(__aCombos[nX][nLang][nY])
+						aDel(__aCombos[nX][nLang],nY)
+						aSize(__aCombos[nX][nLang],len(__aCombos[nX][nLang])-1)
 					Else
 						nY++
 					EndIf
@@ -340,10 +359,10 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 			//-- Ajustes no default e valores salvos inválidos ----------------
 			If cGSC == 'C'
-				If 	&(aVarAux[nX][1]) > Len(aCombos[nX][nLang]) .Or. ;
+				If 	&(aVarAux[nX][1]) > Len(__aCombos[nX][nLang]) .Or. ;
 					&(aVarAux[nX][1]) < 1
 
-					If 	nPresel > Len(aCombos[nX][nLang]) .Or. ;
+					If 	nPresel > Len(__aCombos[nX][nLang]) .Or. ;
 						nPresel < 1
 						nPresel	:= 1
 					EndIf
@@ -353,9 +372,10 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 
 			//-- Tamanho dinâmico dos campos ----------------------------------
 			nLrgMax	:= IIf(lBreakLine,230,130)
+			nLarg	:= 0
 			Do Case
 				Case cTipo == 'D'	; nLarg	:= 10 + _nEspIco
-				Case cGSC == 'C'	; aEval(aCombos[nX][nLang],{|x| nLarg := Max( Len(x) ,nLarg) })	//-- Espaço para o maior texto do combo
+				Case cGSC  == 'C'	; aEval(__aCombos[nX][nLang],{|x| nLarg := Max(Len(x),nLarg)  }) ;; nLarg += _nEspIco	//-- Espaço para o maior texto do combo
 				Case cTipo == 'N'	; nLarg	:= ( Len(Transform(0,cPict)) ) + _nEspIco				//-- Ajusta tamanho com a picture
 				Case cTipo == 'C'	; nLarg	:= ( Len(Transform(Space(nTamanho),cPict)) )			//-- Ajusta tamanho com a picture
 				Otherwise			; nLarg	:= nTamanho
@@ -381,9 +401,9 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 				aAdd(uHelp,CRLF)
 				aAdd(uHelp,cHlpRange)
 			EndIf
-			aAdd(aHelp,uHelp)
-			aAdd(aHelp2,'')
-			aEval(aTail(aHelp),{|x| aTail(aHelp2) += x })
+			aAdd(__aHelp,uHelp)
+			aAdd(__aHelp2,'')
+			aEval(aTail(__aHelp),{|x| aTail(__aHelp2) += x })
 
 			//-----------------------------------------------------------------
 			cVar 	:= aVarAux[nX][1]
@@ -396,14 +416,16 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 				bValid	:= MontaBlock('{|u| '+uValid+' }')
 				cValid	:= uValid
 			EndIf
-			aAdd(abValid,bValid)
-			aAdd(aValid,cValid)
+			aAdd(__abValid,bValid)
+			aAdd(__aValid,cValid)
 
 			If cGSC == 'R'		//-- Tipo Range!
 				bBlkGet := &("{|u| If( PCount() == 0, " + cVar + ", fsetVar(u))}")	//-- Uso assim para usar a função estática!
+			ElseIf cGSC == 'C'	//-- Tipo Combo
+				bBlkGet := MontaBlock("{|u| If( PCount() == 0, " + cVar + ", " + cVar + " := aScan(__aCombos["+cValToChar(nX)+"]["+cValToChar(nLang)+"],u) )}")
 			Else
 				bBlkGet := MontaBlock("{|u| If( PCount() == 0, " + cVar + "," + cVar + " := u)}")
-			EndIf
+			EndIf		
 
 			nLrgMax	:= IIf(lBreakLine,230,100)
 			tSay():New( nLinha+003, 3, MontaBlock("{|| '" + aTxtPerg[nX][nLang] + "' }"),oPrg,,oFonte,,,,.T.,,,nLrgMax,,,,,,)
@@ -413,16 +435,18 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 			Else			
 				nCol	:= nLrgMax+005
 			EndIf
-			bGotFocus	:= MontaBlock('{|| nPHelp := '+cValToChar(nX)+', oMemo:Refresh() }')
-			bHelp		:= MontaBlock('{|| ShowHelpCpo("'+cVar+'",aHelp['+cValToChar(nX)+'],7,{aValid['+cValToChar(nX)+']})}')
+			If lHasHelp
+				bGotFocus	:= MontaBlock('{|| __nPHelp := '+cValToChar(nX)+', __oMemo:Refresh() }')
+			EndIf
+			bHelp		:= MontaBlock('{|| ShowHelpCpo("'+cVar+'",__aHelp['+cValToChar(nX)+'],7,{__aValid['+cValToChar(nX)+']})}')
 			If cGSC == 'C'
-				oGet	:= tComboBox():New( nLinha,nCol,bBlkGet,aCombos[nX][nLang],nLarg,,oPrg,,,,,,.T.,oFonte,,.F.,/*bWhen*/,.T.,,,,cVar)
+				oGet	:= tComboBox():New( nLinha,nCol,bBlkGet,__aCombos[nX][nLang],nLarg,nAltPad,oPrg,,,,,,.T.,oFonte,,.F.,/*bWhen*/,.T.,,,,cVar)
 				oGet:bGotFocus	:= bGotFocus
 				oGet:cTooltip	:= cVar
 				oGet:bHelp 		:= bHelp
 				If nX == 1		;	oGet1	:= oGet		;	EndIf
 			Else
-				oGet := tGet():New( nLinha,nCol,bBlkGet,oPrg,nLarg,,cPict,bValid,,,oFonte,,,.T.,,,/*bWhen*/,,,,,,,cVar,,,,.T.,,,"",2)
+				oGet := tGet():New( nLinha,nCol,bBlkGet,oPrg,nLarg,nAltPad-03,cPict,bValid,,,oFonte,,,.T.,,,/*bWhen*/,,,,,,,cVar,,,,.T.,,,"",2)
 				oGet:bGotFocus	:= bGotFocus
 				oGet:cTooltip	:= cVar
 				oGet:bHelp 		:= bHelp
@@ -440,24 +464,33 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 		
 		//-- Montagem do quadro de help ---------------------------------------
 		If lHasHelp
-			bHelp	:= {|| aHelp2[nPHelp] }
-			oMemo := tMultiget():New((oDlgPerg:nWidth/2)-087,005,bHelp,oDlgPerg,260,40,oFonte;
+			bHelp	:= {|| __aHelp2[__nPHelp] }
+			__oMemo := tMultiget():New((oDlgPerg:nHeight/2)-040,005,bHelp,oDlgPerg,(oDlgPerg:nWidth/2)-10,40,oFonte;
 									,.T.,,,,.T.,,,,,,.T.,,,,,.T.)
-			oMemo:EnableVScroll(.T.)
-			oMemo:EnableHScroll(.T.)
-			//oMemo:Align := CONTROL_ALIGN_BOTTOM
+			__oMemo:EnableVScroll(.T.)
+			__oMemo:EnableHScroll(.T.)
+			//__oMemo:Align := CONTROL_ALIGN_BOTTOM
 		EndIf
+
+		//oDlgModal:addCloseButton({|| lOK := .T., oDlgModal:oOwner:End()}, 'OK')
+		oDlgModal:AddButton('OK'		,{||lOK := .T., oDlgModal:oOwner:End() },'OK',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
+		oDlgModal:AddButton('Cancelar'	,{|| oDlgModal:oOwner:End() },'Cancelar',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
 
 		oDlgModal:bInit	:= {|| oGet1:SetFocus() }	//-- Foco no primeiro parãmetro
 		oDlgModal:Activate()
 	EndIf
 
-	If 	lOK 				//-- Salva parâmetros no profile do usuário
+	If 	lOK 	 				//-- Salva parâmetros no profile do usuário
 		If lUseProf
 			sfSalvaPerg(ucPergunta,Len(aPergs))
-			oProfile:Destroy()
-			FreeObj(oProfile)
+			__oProfile:Destroy()
+			FreeObj(__oProfile)
 		EndIf
+	EndIf
+	
+	If 	lOK .Or. ;
+		.Not. ulAsk	//-- Apenas carrega perguntas
+
 		//-- Salvo os valores atuais por causa da função VarUnref() que perde os valores
 		For nX := 1 to Len(aBkpVar)
 			aBkpVar[nX][2]	:= &(aBkpVar[nX][1])
@@ -494,11 +527,11 @@ Static Function sfCarregaPerg(	cPerg	AS Character;	//01 cPerg
 	ParamObr 0		VAR cPerg
 	ParamObr 1		VAR nQtPerg
 
-	oProfile:SetProgram(_NomeProg_)
-	oProfile:SetTask(cPerg)
-	oProfile:SetType('MV_PAR')
-	oProfile:Activate()
-	aProfile := oProfile:Load()
+	__oProfile:SetProgram(_NomeProg_)
+	__oProfile:SetTask(cPerg)
+	__oProfile:SetType('MV_PAR')
+	__oProfile:Activate()
+	aProfile := __oProfile:Load()
 
 	For nX := 1 to Min(Len(aProfile),nQtPerg)
 		&('MV_PAR'+StrZero(nX,2))	:= aProfile[nX]
@@ -529,12 +562,12 @@ Static Function sfSalvaPerg(cPerg	AS Character;	//01 cPerg
 		aAdd(aProfile,&('MV_PAR'+StrZero(nX,2)))
 	Next nX
 
-	oProfile:SetProgram(_NomeProg_)
-	oProfile:SetTask(cPerg)
-	oProfile:SetType('MV_PAR')
-	oProfile:Activate()
-	oProfile:SetProfile(aProfile)
-	oProfile:Save()
+	__oProfile:SetProgram(_NomeProg_)
+	__oProfile:SetTask(cPerg)
+	__oProfile:SetType('MV_PAR')
+	__oProfile:Activate()
+	__oProfile:SetProfile(aProfile)
+	__oProfile:Save()
 	FwFreeArray(aProfile)
 
 Return
@@ -553,7 +586,7 @@ Static Function sfInitVar(	aPergs	AS Array	;	//01 aPergs
 	Local cVar										AS Character
 	Local nLenPergs									AS Numeric
 	Local nX										AS Numeric
-	Local cVar01,cVar02,cVar03,cVar04,cVar05		AS Character
+	Local cVar01,cVar02/* ,cVar03,cVar04,cVar05 */	AS Character
 
 	//-- Parâmetros da Rotina -------------------------------------------------
 	ParamObr 0		VAR aPergs
@@ -570,9 +603,9 @@ Static Function sfInitVar(	aPergs	AS Array	;	//01 aPergs
 
 		cVar01	:= If(nX1_VAR01 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR01]))
 		cVar02	:= If(nX1_VAR02 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR02]))
-		cVar03	:= If(nX1_VAR03 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR03]))
-		cVar04	:= If(nX1_VAR04 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR04]))
-		cVar05	:= If(nX1_VAR05 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR05]))
+	//	cVar03	:= If(nX1_VAR03 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR03]))	//-- Só vincula duas variáveis
+	//	cVar04	:= If(nX1_VAR04 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR04]))
+	//	cVar05	:= If(nX1_VAR05 > nLenPergs,'',AllTrim(aPergs[nX,nX1_VAR05]))
 		If 	.Not. Empty(cVar01) .And. ;
 			.Not. ( cVar01 == cVar )
 			aAdd(aTail(aVarAux),cVar01)
@@ -738,7 +771,7 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 	If .Not. Empty(cRet)
 		__ReadVar	:= 'M->'+cVar
 		&(ReadVar()):= cRet
-		bValid	:= abValid[nPosVar]
+		bValid	:= __abValid[nPosVar]
 		If Empty(bValid)		;	bValid	:= {|| AllwaysTrue() }		;	EndIf
 		If .Not. eVal(bValid)	;	&(ReadVar())	:= uVlrVar			; 	EndIf	//-- Valida os dados, se Falso restaura o conteúdo
 	EndIf
