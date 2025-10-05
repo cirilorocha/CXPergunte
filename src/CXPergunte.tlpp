@@ -5,7 +5,7 @@
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
-Data		: 03/10/2025 v1.25
+Data		: 03/10/2025 v1.26
 Consultoria	: CX Consultoria
 Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -226,6 +226,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	//-- Verifica parâmetros carregados e ajusta se necessário ----------------
 	sfProcParam(aPergs	;	//01 aPergs
 			,	aVarAux	;	//02 aVarAux
+			,	lUseProf;	//03 lUseProf
 			)
 
 	//-- Criação da tela ------------------------------------------------------
@@ -625,8 +626,9 @@ Autor		: Cirilo Rocha
 Data		: 05/05/2025
 Info		: Faz a verficação dos parâmetros carregados, tipo, tamanho, e inicializa se precisar
 =================================================================================================*/
-Static Function sfProcParam(aPergs	AS Array	;	//01 aPergs
-						,	aVarAux	AS Array	;	//02 aVarAux
+Static Function sfProcParam(aPergs		AS Array	;	//01 aPergs
+						,	aVarAux		AS Array	;	//02 aVarAux
+						,	lUseProf	AS Logical	;	//03 lUseProf
 						)
 
 	//-- Declaração de Variáveis ----------------------------------------------
@@ -642,6 +644,7 @@ Static Function sfProcParam(aPergs	AS Array	;	//01 aPergs
 	//-- Parâmetros da Rotina -------------------------------------------------
 	ParamObr 0		VAR aPergs
 	ParamObr 1		VAR aVarAux
+	ParamObr 2		VAR lUseProf	
 
 	//-- Variáveis adicionais -------------------------------------------------
 	For nX := 1 to Len(aPergs)
@@ -658,7 +661,8 @@ Static Function sfProcParam(aPergs	AS Array	;	//01 aPergs
 		
 		//-- Inicializa valores ? se alterou de tamanho ou tipo
 		If 	cTipo <> ValType(xValue) .Or. ;
-			( cTipo == 'C' .And. Len(AllTrim(xValue)) > nTamanho )
+			( cTipo == 'C' .And. Len(AllTrim(xValue)) > nTamanho ) .Or. ;
+			.Not. lUseProf
 
 			Do Case
 				Case cTipo == 'C'	; xValue := IIf(cGSC=='R',cCnt02,cCnt01)
