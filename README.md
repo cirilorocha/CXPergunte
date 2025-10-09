@@ -4,6 +4,17 @@
 
 A função **CXPergunte** é uma versão aprimorada da função padrão `Pergunte()` do Protheus/TOTVS, oferecendo maior flexibilidade na criação de telas de parâmetros. Permite definir perguntas dinamicamente através de arrays, sem necessidade de criar registros no SX1.
 
+Exemplo1:
+
+<img width="683" height="708" alt="image" src="https://github.com/user-attachments/assets/8051cff4-8bd3-4d26-8cab-b232857f9550" />
+
+
+
+Exemplo2:
+
+<img width="686" height="262" alt="image" src="https://github.com/user-attachments/assets/6bf6eaf2-aefc-4cc4-8fd8-2a1a09c91b3f" />
+
+
 ## 🚀 Principais Características
 
 - ✅ **Compatibilidade Total**: Usa exatamente os mesmos parâmetros da função `Pergunte()` padrão
