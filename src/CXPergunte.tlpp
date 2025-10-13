@@ -5,7 +5,7 @@
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
-Data		: 03/10/2025 v1.26
+Data		: 13/10/2025 v1.27
 Consultoria	: CX Consultoria
 Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -473,9 +473,8 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 			//__oMemo:Align := CONTROL_ALIGN_BOTTOM
 		EndIf
 
-		//oDlgModal:addCloseButton({|| lOK := .T., oDlgModal:oOwner:End()}, 'OK')
-		oDlgModal:AddButton('OK'		,{||lOK := .T., oDlgModal:oOwner:End() },'OK',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
-		oDlgModal:AddButton('Cancelar'	,{|| oDlgModal:oOwner:End() },'Cancelar',/*nShortCut*/,.T.,.F.,.T.,{|| .T.})
+		oDlgModal:addOkButton({||lOK := .T., oDlgModal:oOwner:End() }, "OK")
+		oDlgModal:addCloseButton({|| lOK := .F., oDlgModal:oOwner:End()}, 'Cancelar')
 
 		oDlgModal:bInit	:= {|| oGet1:SetFocus() }	//-- Foco no primeiro parãmetro
 		oDlgModal:Activate()
