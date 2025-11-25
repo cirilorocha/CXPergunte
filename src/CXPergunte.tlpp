@@ -5,7 +5,7 @@
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
-Data		: 13/10/2025 v1.27
+Data		: 23/11/2025 v1.28
 Consultoria	: CX Consultoria
 Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -64,7 +64,7 @@ Static nX1_PICTURE	:=	42
 #Define _MsgLinha_		_NomeProg_+'('+_LINHA_+')'
 
 #Define _nIncLin		16
-#Define _nEspIco		03
+#Define _nEspIco		04
 #Define _nTamCh			04
 
 #xTranslate _FieldGet(<cCampo>) => ;
