@@ -3,26 +3,29 @@
 #INCLUDE 'ParmType.ch'
 #INCLUDE "ParmTypeCH.ch"
 
-/*=================================================================================================
-Autor		: Cirilo Rocha
-Data		: 23/11/2025 v1.28
-Consultoria	: CX Consultoria
-Info		: Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
-				parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
-			A sequência dos campos é exatamente a mesma do SX1, sendo que muitos são opcionais
-				e podem não ser informados que vai funcionar, o array precisa ser pelo menos 11
-				posições, sendo que nesses alguns são opcionais: como o GRUPO[1], ORDEM[2], DESCRIÇÃO
-				ESPANHOL[4], DESCRIÇÃO INGLÊS[5], VARIÁVEL[6], PRESSEL[10]
-			A ordem segue a ordem dos elementos do array, o grupo de perguntas se não informado
-				puxa do primeiro parâmetro passado, e vice versa.
-			O Help pode ser um array com os textos ou uma string com o HELP do XB4
-			Também permite a seleção de arquivos mais flexível, permitindo usar máscaras (X1_DEF02),
-				Diretório Inicial (X1_DEF03), lAbrir (X1_DEF04) e lServer (X1_DEF05)
-			É possível carregar um conjunto de dados das perguntas padrão (SX1), basta não informar
-				o array de definição das perguntas.
-			Faz o vínculo entre as variáveis MV_PAR## e as variáveis informadas no array de perguntas
-				X1_VAR01 ou X1_VAR02, então se altera o MV_PAR a varíavel já recebe o valor automaticamente
-=================================================================================================*/
+//-------------------------------------------------------------------------------------------------
+/*/{Protheus.doc} CXPergunte
+@autor			Cirilo Rocha
+@since			27/11/2025
+@version		1.30
+@url			https://github.com/cirilorocha/CXPergunte
+@description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
+					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
+				A sequência dos campos é exatamente a mesma do SX1, sendo que muitos são opcionais
+					e podem não ser informados que vai funcionar, o array precisa ser pelo menos 
+					11 posições, sendo que nesses alguns são opcionais: como o GRUPO[1], ORDEM[2], 
+					DESCRIÇÃO ESPANHOL[4], DESCRIÇÃO INGLÊS[5], VARIÁVEL[6], PRESSEL[10]
+				A ordem segue a ordem dos elementos do array, o grupo de perguntas se não informado
+					puxa do primeiro parâmetro passado, e vice versa.
+				O Help pode ser um array com os textos ou uma string com o HELP do XB4
+				Também permite a seleção de arquivos mais flexível, permitindo usar máscaras (X1_DEF02),
+					Diretório Inicial (X1_DEF03), lAbrir (X1_DEF04) e lServer (X1_DEF05)
+				É possível carregar um conjunto de dados das perguntas padrão (SX1), basta não 
+					informar o array de definição das perguntas.
+				Faz o vínculo entre as variáveis MV_PAR## e as variáveis informadas no array de 
+					perguntas X1_VAR01 ou X1_VAR02, então se altera o MV_PAR a varíavel já recebe 
+					o valor automaticamente
+/*--------------------------------------- LICENÇA DE USO ----------------------------------------*/
 //O SOFTWARE É FORNECIDO "TAL COMO ESTÁ", SEM GARANTIA DE QUALQUER TIPO, EXPRESSA OU IMPLÍCITA,
 //INCLUINDO MAS NÃO SE LIMITANDO A GARANTIAS DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE
 //ESPECÍFICA E NÃO INFRACÇÃO. EM NENHUM CASO OS AUTORES OU TITULARES DE DIREITOS AUTORAIS
