@@ -6,8 +6,8 @@
 //-------------------------------------------------------------------------------------------------
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
-@since			27/11/2025
-@version		1.30
+@since			28/11/2025
+@version		1.31
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -455,7 +455,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 				oGet:cTooltip	:= cVar
 				oGet:bHelp 		:= bHelp
 				If cGSC == 'F'	//-- File
-					bFile	:= &('{|| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'","'+cValToChar(nX)+'" )}')
+					bFile	:= &('{|| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'",'+cValToChar(nX)+' )}')
 					tBitmap():New( nLinha+002,nCol+nLarg+001,008,008,"LUPA",,.T.,oPrg,bFile,,.F.,.T.,,,.F.,,.T.,,.F.)
 				Else
 					oGet:cF3 := cF3
@@ -727,7 +727,7 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 						,	lAbrir		AS Logical	;	//04 lAbrir
 						,	lServer		AS Logical	;	//05 lServer
 						,	cVar		AS Character; 	//06 cVar	
-						,	nPosVar		AS Character;	//07 nPosVar
+						,	nPosVar		AS Numeric	;	//07 nPosVar
 						)
 
 	//-- Declaração de Variáveis ----------------------------------------------
