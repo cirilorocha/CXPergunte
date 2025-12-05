@@ -6,8 +6,8 @@
 //-------------------------------------------------------------------------------------------------
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
-@since			28/11/2025
-@version		1.31
+@since			30/11/2025
+@version		1.32
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -1110,6 +1110,61 @@ Static Function sfParserParam(	aPergs		AS Array	;	//01 aPergs
 			cValor	+= cChar
 		EndIf
 	Next nX
+
+Return
+
+//-------------------------------------------------------------------------------------------------
+/*/{Protheus.doc} CXSetMVValue
+@description	Função análoga a função padrão SetMVValue, para funcionar em conjunto com a CXPergunte
+@autor			Cirilo Rocha
+@since			30/11/2025
+-------------------------------------------------------------------------------------------------*/
+User Function CXSetMVValue(	aPergs	AS Variant	;	//01 aPergs
+						,	cVar	AS Character;	//02 cVar
+						,	uValue	AS Variant	;	//03 uValue
+						,	cPerg	AS Character;	//04 cPerg
+						)
+
+	//-- Declaração de Variáveis ----------------------------------------------
+	Local aVarAux	:= {}							AS Array
+	Local aBkpVar	:= {}							AS Array
+
+	Private __oProfile	:= FwProfile():New()		AS Object
+
+	//-- Parâmetros da Rotina -------------------------------------------------
+	ParamType 0		VAR aPergs		AS Array
+	ParamType 1		VAR cVar		AS Character
+
+	If Empty(aPergs[1][nX1_GRUPO])
+		ParamType 1		VAR cPerg		AS Character
+	Else
+		cPerg	:= aPergs[1][nX1_GRUPO]
+	EndIf
+
+	SaveInter() 			//-- Salva variáveis públicas (MV_PAR##, INCLUI, ALTERA, ETC.) Ñ NMODULO,CMODULO,CFILANT
+
+	//-- Monta lista de variáveis utilizadas ----------------------------------
+	sfInitVar(	aPergs		;	//01 aPergs
+			,	@aVarAux	;	//02 @aVarAux
+			,	@aBkpVar	;	//03 @aBkpVar
+			)
+
+	//-- Carrega perguntas salvas no profile do usuário -----------------------
+	sfCarregaPerg(cPerg,Len(aPergs))
+
+	//-- Verifica parâmetros carregados e ajusta se necessário ----------------
+	sfProcParam(aPergs	;	//01 aPergs
+			,	aVarAux	;	//02 aVarAux
+			,	.T.		;	//03 lUseProf
+			)
+	
+	&(cVar)	:= uValue
+
+	sfSalvaPerg(cPerg,Len(aPergs))
+	__oProfile:Destroy()
+	FreeObj(__oProfile)
+
+	RestInter() 			//-- Restaura variáveis públicas (MV_PAR##, INCLUI, ALTERA, ETC.)
 
 Return
 
