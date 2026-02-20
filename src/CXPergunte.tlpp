@@ -6,8 +6,8 @@
 //-------------------------------------------------------------------------------------------------
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
-@since			19/12/2025
-@version		1.34
+@since			20/02/2026
+@version		1.35
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -788,7 +788,7 @@ Return
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
-Data		: 13/03/2020 [v3.0]
+Data		: 13/03/2020 [v3.1]
 Info		: Função para substituir o cGetFile padrão, de forma tratar a nova função tFileDialog 
 				na release 25
 /*========+===============+========================================================================
@@ -802,6 +802,7 @@ Info		: Função para substituir o cGetFile padrão, de forma tratar a nova função 
           |               |  estava documentado errado
           |               | Melhores tratamentos para WebApp
  11/06/25 | Cirilo Rocha  | Pequena revisão no fonte
+ 20/02/26 | Cirilo Rocha  | Pequena revisão no fonte
           |               | 
 ==========+===============+======================================================================*/
 Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
@@ -815,10 +816,10 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 						)							AS Character
 
 	//-- Declaração de Variáveis ----------------------------------------------
-	Local uRet          							AS Variant
 	Local aMasc										AS Array
 	Local nX										AS Numeric
 	Local cMascProc									AS Variant
+	Local cRet          							AS Character
 	Local cTemp										AS Character
 	Local cSession	:= FunName()					AS Character
 	Local cDrive,cDir,cFile,cExten					AS Character
@@ -873,7 +874,7 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 			cMascProc	:= 'Todos os Arquivos (*.*)'
 		EndIf
 		
-		uRet    := tFileDialog( cMascProc	;	//01 cMascara
+		cRet    := tFileDialog( cMascProc	;	//01 cMascara
 							,	cTitulo		;	//02 cTitulo
 							,	nMascPadrao	;	//03 nDef
 							,	cDirInicial	;	//04 cDirInicial
@@ -881,15 +882,15 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 							,	nOpcoes	    ;	//06 nOpcoes
 							)
 
-        If .Not. lKeepCase		;	uRet    := Lower(uRet)	;	EndIf
-        If  .Not. Empty(uRet) .And. ;
+        If .Not. lKeepCase		;	cRet    := Lower(cRet)	;	EndIf
+        If  .Not. Empty(cRet) .And. ;
             BitAnd(nOpcoes,GETF_RETDIRECTORY) .And. ;
-            .Not. (Right(uRet,1) $ '\/')
+            .Not. (Right(cRet,1) $ '\/')
 
-			uRet	:= IIf(GetRemoteType() == REMOTE_QT_LINUX,'/','\')
+			cRet	:= IIf(GetRemoteType() == REMOTE_QT_LINUX,'/','\')
         EndIf
     Else
-		uRet    := cGetFile(cMascara	;	//01 cMascara
+		cRet    := cGetFile(cMascara	;	//01 cMascara
 						,	cTitulo		;	//02 cTitulo
 						,	nMascPadrao	;	//03 nMascPadrao
 						,	cDirInicial	;	//04 cDirInicial
@@ -901,34 +902,34 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 	EndIf
 
 	//-- Tratamento de erros para WebApp (pode não ser necessário no futuro)
-	If 	.Not. BitAnd(nOpcoes,GETF_MULTISELECT) .And. ;
-		.Not. Empty(uRet)
+	If 		.Not. BitAnd(nOpcoes,GETF_MULTISELECT) 	;
+	.And.	.Not. Empty(cRet)						;
 
-		SplitPath( uRet, @cDrive, @cDir, @cFile, @cExten )
+		SplitPath( cRet, @cDrive, @cDir, @cFile, @cExten )
 		If BitAnd(nOpcoes,GETF_RETDIRECTORY)		//-- Diretórios
-			If .Not. ExistDir(uRet)
-				FwAlertError('Diretório informado '+uRet+' NÃO existe.',_MsgLinha_)
-				uRet	:= ''
+			If .Not. ExistDir(cRet)
+				FwAlertError('Diretório informado '+cRet+' NÃO existe.',_MsgLinha_)
+				cRet	:= ''
 			EndIf		
-		ElseIf .Not. Empty(uRet)					//-- Arquivos
+		ElseIf .Not. Empty(cRet)					//-- Arquivos
 			If Empty(cFile)
 				FwAlertError('Nenhum nome de arquivo informado.',_MsgLinha_)
-				uRet	:= ''
+				cRet	:= ''
 			ElseIf 	lAbrir .And. ;
-					.Not. File(uRet)				//-- Valida se arquivo existe
-				FwAlertError('Arquivo informado '+uRet+' NÃO existe.',_MsgLinha_)
-				uRet	:= ''
+					.Not. File(cRet)				//-- Valida se arquivo existe
+				FwAlertError('Arquivo informado '+cRet+' NÃO existe.',_MsgLinha_)
+				cRet	:= ''
 			EndIf
 		EndIf
 	EndIf
 
 	//-- Salva o diretório atual que o usuário utilizou -----------------------
-	If .Not. Empty(uRet)
-		SplitPath( uRet,@cDrive,@cDir,/*@cFile*/,/*@cExt*/ )
+	If .Not. Empty(cRet)
+		SplitPath( cRet,@cDrive,@cDir,/*@cFile*/,/*@cExt*/ )
 		fwWriteProfString(cSession,"CGETFILE",cDrive+cDir,.T.) //Guarda o diretório atual
 	EndIf
 
-Return uRet
+Return cRet
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
