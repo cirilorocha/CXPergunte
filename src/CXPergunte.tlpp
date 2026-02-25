@@ -6,8 +6,8 @@
 //-------------------------------------------------------------------------------------------------
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
-@since			20/02/2026
-@version		1.35
+@since			24/02/2026
+@version		1.36
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -264,7 +264,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 		oDlgModal:createDialog()
 		oDlgPerg	:= oDlgModal:getPanelMain()
 
-		oPnl := tGroup():New( 001,005, (oDlgPerg:nHeight/2)-IIf(lHasHelp,45,00), (oDlgPerg:nWidth/2)-05,, oDlgPerg,,,.T., )
+		oPnl := tGroup():New( 001,005, __DlgHeight(oDlgPerg)-IIf(lHasHelp,45,00), __DlgWidth(oDlgPerg)-05,, oDlgPerg,,,.T., )
 
 		//-- Cria objeto Scroll
 		oPrg := tScrollArea():New(oPnl,001,001,150,250)
@@ -469,7 +469,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 		//-- Montagem do quadro de help ---------------------------------------
 		If lHasHelp
 			bHelp	:= {|| __aHelp2[__nPHelp] }
-			__oMemo := tMultiget():New((oDlgPerg:nHeight/2)-040,005,bHelp,oDlgPerg,(oDlgPerg:nWidth/2)-10,40,oFonte;
+			__oMemo := tMultiget():New(__DlgHeight(oDlgPerg)-040,005,bHelp,oDlgPerg,__DlgWidth(oDlgPerg)-10,40,oFonte;
 									,.T.,,,,.T.,,,,,,.T.,,,,,.T.)
 			__oMemo:EnableVScroll(.T.)
 			__oMemo:EnableHScroll(.T.)
