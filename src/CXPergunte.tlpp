@@ -6,8 +6,8 @@
 //-------------------------------------------------------------------------------------------------
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
-@since			24/02/2026
-@version		1.36
+@since			30/09/2025
+@version		1.36 (26/02/2026)
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
