@@ -7,7 +7,7 @@
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
 @since			30/09/2025
-@version		1.36 (26/02/2026)
+@version		1.38 (12/04/2026)
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -62,7 +62,7 @@ Static nX1_F3		:=	38	;	Static nX1_PYME		:=	39	;	Static nX1_GRPSXG	:=	40
 Static nX1_HELP		:=	41
 Static nX1_PICTURE	:=	42
 
-#Define _NomeProg_		FileNoExt(ProcSource())
+#Define _NomeProg_		RetFileName(ProcSource())
 #Define _LINHA_			StrZero(ProcLine(),5)
 #Define _MsgLinha_		_NomeProg_+'('+_LINHA_+')'
 
@@ -72,6 +72,7 @@ Static nX1_PICTURE	:=	42
 
 #xTranslate _FieldGet(<cCampo>) => ;
 	FieldGet(FieldPos(<cCampo>))
+
 //-- Parâmetros obrigatórios
 #xCommand PARAMOBR [ <param> VAR ] <varname> ;
 	[ MESSAGE <message> ] ;
@@ -101,7 +102,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local cHlpRange									AS Character
 	Local cLang		:= FwRetIdiom() 				AS Character	//-- Retorna o idioma selecionado
 	Local bBlkGet									AS CodeBlock
-	Local bValid, bFile, bHelp, bGotFocus			AS CodeBlock
+	Local bValid, bHelp, bGotFocus					AS CodeBlock
 	Local oPnl,oPrg,oGet							AS Object
 	Local oDlgModal,oDlgPerg						AS Object
 	Local oFonte									AS Object
@@ -112,8 +113,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local nX,nY										AS Numeric
 	Local nLenPergs									AS Numeric
 	Local nLang										AS Numeric
-	Local nAlt										AS Numeric
-	Local nLarg										AS Numeric
+	Local nAlt, nLarg								AS Numeric
 	Local nAltPad	:= 15							AS Numeric
 	Local nLrgMax									AS Numeric
 	Local nCol										AS Numeric
@@ -190,8 +190,8 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 		(cTab)->(dbSetOrder(1))
 		nLenPergs	:= (cTab)->(FCount())
 		If (cTab)->(dbSeek(PadR(ucPergunta,10)))
-			While 	(cTab)->(!EOF()) .And. ;
-					(cTab)->(_FieldGet('X1_GRUPO')) == PadR(ucPergunta,10)
+			While 	(cTab)->(!EOF()) ;
+			.And.	(cTab)->(_FieldGet('X1_GRUPO')) == PadR(ucPergunta,10)	;
 				
 				aAdd(aPergs,Array(nLenPergs))
 				For nX := 1 to nLenPergs
@@ -208,8 +208,9 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	//-- Ajusta tamanhos conforme SXG se necessário ---------------------------
 	For nX := 1 to Len(aPergs)
 		cGrpSxg	:= If(nX1_GRPSXG > Len(aPergs),'',aPergs[nX,nX1_GRPSXG])
-		If 	.Not. Empty(cGrpSxg) .And. ;
-			FWSXGUtil():FieldGroupExists( cGrpSxg ) 				//-- Grupo de campos informado existe (lRet)
+		If 		.Not. Empty(cGrpSxg) ;
+		.And.	FWSXGUtil():FieldGroupExists( cGrpSxg ) ;			//-- Grupo de campos informado existe (lRet)
+			
 			aPergs[nX1_TAMANHO]	:= FWSXGUtil():SXGSize( cGrpSxg )	//-- Tamanho do grupo de campo - XG_SIZE
 		EndIf
 	Next nX
@@ -245,14 +246,14 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 					Exit
 				EndIf
 			Next nX
-			If .Not. lTemHelp
-				lHasHelp	:= .F.
-			EndIf
+			If .Not. lTemHelp	;	lHasHelp	:= .F.		;	EndIf
 		EndIf
 
-		cHlpRange	:= 	"Para definir intervalos de dados sequenciais, utilize hífen (1-3) e para os não "+;
-						"sequenciais, ponto e vírgula (3;5;1). Utilizar aspas simples para desconsiderar "+;
-						"hifens nos conteúdos. Exemplo: '000001-01'-'000004-09';000006;0000008-'000009-08'"
+		cHlpRange	:= 	"Deixe vazio para selecionar todos os registros. Para filtrar, utilize ";
+					+	"hífen (-) para intervalos sequenciais e ponto e vírgula (;) para valores ";
+					+	"individuais, podendo combinar ambos no mesmo filtro. Caso o conteúdo ";
+					+	"original já possua hifens, envolva-o em aspas simples.";
+					+	"Exemplo: '000001-01'-'000004-09';000006;0000008-'000009-08'"
 		oFonte		:= tFont():New('Arial',,-12,,.F.)
 
 		oDlgModal	:= FWDialogModal():New()
@@ -455,8 +456,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 				oGet:cTooltip	:= cVar
 				oGet:bHelp 		:= bHelp
 				If cGSC == 'F'	//-- File
-					bFile	:= &('{|| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'",'+cValToChar(nX)+' )}')
-					tBitmap():New( nLinha+002,nCol+nLarg+001,008,008,"LUPA",,.T.,oPrg,bFile,,.F.,.T.,,,.F.,,.T.,,.F.)
+					oGet:bF3	:= &('{|oGet| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'",'+cValToChar(nX)+', oGet )} ')
 				Else
 					oGet:cF3 := cF3
 				EndIf
@@ -465,7 +465,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 			
 			nLinha	+= _nIncLin
 		Next nX
-		
+
 		//-- Montagem do quadro de help ---------------------------------------
 		If lHasHelp
 			bHelp	:= {|| __aHelp2[__nPHelp] }
@@ -728,13 +728,15 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 						,	lServer		AS Logical	;	//05 lServer
 						,	cVar		AS Character; 	//06 cVar	
 						,	nPosVar		AS Numeric	;	//07 nPosVar
-						)
+						,	oGet		AS Object	;	//08 oGet
+						)							AS Logical
 
 	//-- Declaração de Variáveis ----------------------------------------------
-	Local cRet , cTit							AS Character
-	Local cBakVar	:= ReadVar()				AS Character
-	Local bValid								AS CodeBlock
-	Local uVlrVar	:= &('M->'+cVar)			AS Variant
+	Local cRet , cTit								AS Character
+	Local cBakVar	:= ReadVar()					AS Character
+	Local bValid									AS CodeBlock
+	Local lOK		:= .F.							AS Logical
+	Local uVlrVar	:= &('M->'+cVar)				AS Variant
 
 	//-- Parâmetros da Rotina -------------------------------------------------
 	Default nOpcoes	:= 0
@@ -779,12 +781,17 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 		&(ReadVar()):= cRet
 		bValid	:= __abValid[nPosVar]
 		If Empty(bValid)		;	bValid	:= {|| AllwaysTrue() }		;	EndIf
-		If .Not. eVal(bValid)	;	&(ReadVar())	:= uVlrVar			; 	EndIf	//-- Valida os dados, se Falso restaura o conteúdo
+		//-- Valida os dados, se Falso restaura o conteúdo
+		If ( lOK	:= Eval(bValid) )
+			oGet:Refresh()
+		Else
+			&(ReadVar())	:= uVlrVar
+		EndIf
 	EndIf
 
 	__ReadVar	:= cBakVar
 
-Return
+Return lOK
 
 /*=================================================================================================
 Autor		: Cirilo Rocha
@@ -1223,20 +1230,21 @@ Return
 //
 //	//               03                     07 08 09 11  12              14    17            18   22  24     29     34     38      41  42
 //	//			    Descrição               Tp Tm Dc GCS Validacao       D1    Cnt1          D2  Cnt2 D3     D4     D5     F3      Hlp   Pic
-//	aAdd(aPergs,{,,'Filiais ?'			,,,,'C',90,0,,'R','NaoVazio()'	,'cFiliais','',,,'RA_FILIAL'	,,'',,,'',,'',,,,,'',,,,,'',,,,'XM0',,,'.RHFILIAL.'})	//RANGE
+//	aAdd(aPergs,{,,'Filiais ?'			,,,,'C',90,0,,'R','NaoVazio()'	,'cFltFil','',,,'RA_FILIAL',,'',,,'',,'',,,,,'',,,,,'',,,,'XM0',,,'.RHFILIAL.'})	//RANGE
+//	aAdd(aPergs,{,,'Matrículas ? '		,,,,'C',90,0,,'R','NaoVazio()'	,'cFltMat','',,,'RA_MAT'	,,'',,,'',,'',,,,,'',,,,,'',,,,'SRA',,,'.RHMATRIC.'})	//RANGE
 //	aAdd(aPergs,{,,'Admissão de ?'		,,,,'D',08,0,,'G',''			,'dEmissao','',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMDE.'})
 //	aAdd(aPergs,{,,'Linha Produção ?'	,,,,'C',02,0,,'G','NaoVazio().And.ExistCpo("ZD0")'	,'cCodPla','',,,''	,,'',,,'',,'',,,,,'',,,,,'',,,,'ZD0',,,})
 //	aAdd(aPergs,{,,'Valor ?'			,,,,'N',08,2,,'G',{|| U_VLd1()}	,,'',,,''			,'nValor1','',,,  ,,'',,,,,'',,,,,'',,,,'','',,''})
 //	aAdd(aPergs,{,,'123456789*123456789*123456789*123456'	,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Ano / Mês'			,,,,'C',06,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'','@R 9999 / 99'})
-//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',100,0,,'F','U_VLd1()'			,,GETF_LOCALHARD,,,''			,,'*.csv',,,  ,,'C:\Protheus\',,,,,.T.,,,,,.F.,,,,'','',,{'HELP DO CAMPO'}})
-//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',100,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,{'HELP DO CAMPO'}})
+//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',200,0,,'F','U_VLd1()'			,,GETF_LOCALHARD,,,''			,,'*.csv',,,  ,,'C:\Protheus\',,,,,.T.,,,,,.F.,,,,'','',,{'HELP DO CAMPO'}})
+//	aAdd(aPergs,{,,'Arquivo'			,,,,'C',200,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,{'HELP DO CAMPO'}})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Categorias ?'		,,,,'C',15,0,,'G','fcategoria()',,'',,,'ACDEGHIMPST',,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHCATEG.'})
 //	aAdd(aPergs,{,,'Situações ?'		,,,,'C',05,0,,'G','fSituacao()' ,,'',,,' ADFT'		,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHSITUA.'})
-//	aAdd(aPergs,{,,'Informações De ?'	,,,,'N',01,0,3,'C',''			,,'Ass Médica',,,,,'Ass Odontológica',,,,,'Ambas',,,,,'',,,,,'',,,,,,,''})	//COMBO
+//	aAdd(aPergs,{,,'Informações De ?'	,,,,'N',01,0,3,'C',''			,,'Ass Médica',,,,,'Ass Odontológica',,,,,'Ambas',,,,,'',,,,,'',,,,,,,'help do campo!'})	//COMBO
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
