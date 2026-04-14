@@ -7,7 +7,7 @@
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
 @since			30/09/2025
-@version		1.38 (12/04/2026)
+@version		1.39 (14/04/2026)
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -102,9 +102,14 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local cHlpRange									AS Character
 	Local cLang		:= FwRetIdiom() 				AS Character	//-- Retorna o idioma selecionado
 	Local bBlkGet									AS CodeBlock
-	Local bValid, bHelp, bGotFocus					AS CodeBlock
-	Local oPnl,oPrg,oGet							AS Object
-	Local oDlgModal,oDlgPerg						AS Object
+	Local bValid									AS CodeBlock
+	Local bHelp										AS CodeBlock
+	Local bGotFocus									AS CodeBlock
+	Local oPnl										AS Object
+	Local oPrg										AS Object
+	Local oGet										AS Object
+	Local oDlgModal									AS Object
+	Local oDlgPerg									AS Object
 	Local oFonte									AS Object
 	Local oGet1										AS Object
 	Local lOK		:= .F.							AS Logical
@@ -113,7 +118,8 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local nX,nY										AS Numeric
 	Local nLenPergs									AS Numeric
 	Local nLang										AS Numeric
-	Local nAlt, nLarg								AS Numeric
+	Local nAlt										AS Numeric
+	Local nLarg										AS Numeric
 	Local nAltPad	:= 15							AS Numeric
 	Local nLrgMax									AS Numeric
 	Local nCol										AS Numeric
@@ -133,10 +139,14 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	//-- Transferimos o Conteudo do Array para variaveis
 	//-- Alguns Elementos (Cnt02..Cnt05,...) estao mantindos para compatibilizacao
 	//-- Embora nao sejam utilizados
-	Local cVar		,cTipo							AS Character
-	Local nTamanho	,nDecimal	,nPresel			AS Numeric
+	Local cVar										AS Character
+	Local cTipo										AS Character
+	Local nTamanho									AS Numeric
+	Local nDecimal									AS Numeric
+	Local nPresel									AS Numeric
 	Local cGSC										AS Character
-	Local cF3		,cGrpSxg						AS Character
+	Local cF3										AS Character
+	Local cGrpSxg									AS Character
 	Local uHelp										AS Variant
 	Local cPict										AS Character
 	Local cValid									AS Character
@@ -638,8 +648,12 @@ Static Function sfProcParam(aPergs		AS Array	;	//01 aPergs
 	Local nX										AS Numeric
 
 	Local cTipo										AS Character
-	Local nTamanho	, nDecimal	,nPresel			AS Numeric
-	Local cGSC		, cCnt01	,cCnt02				AS Character
+	Local nTamanho									AS Numeric
+	Local nDecimal									AS Numeric
+	Local nPresel									AS Numeric
+	Local cGSC										AS Character
+	Local cCnt01									AS Character
+	Local cCnt02									AS Character
 
 	Local xValue									AS Variant
 
@@ -692,9 +706,11 @@ Static Function fSetVar(u)
 	
 	//-- Declaração de Variáveis ----------------------------------------------
 	Local cVar		:= ReadVar()					AS Character
-	Local cConteudo	:= ""							AS Character
+	Local cConteudo	:= ''							AS Character
 	Local nTam		:= 0							AS Numeric
-	Local cContAux, cAux	:= ""					AS Character
+	Local cContAux	:= ''							AS Character
+	Local cAux		:= ''							AS Character
+	
 	Static nConts	:= 0							AS Numeric
 	
 	//-------------------------------------------------------------------------
@@ -732,7 +748,8 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 						)							AS Logical
 
 	//-- Declaração de Variáveis ----------------------------------------------
-	Local cRet , cTit								AS Character
+	Local cRet										AS Character
+	Local cTit										AS Character
 	Local cBakVar	:= ReadVar()					AS Character
 	Local bValid									AS CodeBlock
 	Local lOK		:= .F.							AS Logical
@@ -746,14 +763,15 @@ Static Function sfSelArq(	nOpcoes		AS Numeric	;	//01 nOpcoes
 	Else									;	cTit	:= 'Selecione o arquivo'
 	EndIf
 
-	cRet	:= sfGetFile(	cMascara		;	//01 cMascara
-						,	cTit			;	//02 cTitulo
-						,	/*nMascPadrao*/	;	//03 nMascPadrao
-						,	cDirInicial		;	//04 cDirInicial (def '')
-						,	lAbrir			;	//05 lAbrir (def .F.)
-						,	nOpcoes			;	//06 nOpcoes (def 0)
-						,	lServer			;	//07 lServer (def .T.)
-						,	/*lKeepCase*/	;	//08 lKeepCase (def .F.)
+	cRet	:= sfGetFile(				;
+				/*01*/	 cMascara		;	//cMascara
+				/*02*/	,cTit			;	//cTitulo
+				/*03*/	,/*nMascPadrao*/;	//nMascPadrao
+				/*04*/	,cDirInicial	;	//cDirInicial (def '')
+				/*05*/	,lAbrir			;	//lAbrir (def .F.)
+				/*06*/	,nOpcoes		;	//nOpcoes (def 0)
+				/*07*/	,lServer		;	//lServer (def .T.)
+				/*08*/	,/*lKeepCase*/	;	//lKeepCase (def .F.)
 						)
 	
 	//-- Valida se o arquivo existe
@@ -829,7 +847,10 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 	Local cRet          							AS Character
 	Local cTemp										AS Character
 	Local cSession	:= FunName()					AS Character
-	Local cDrive,cDir,cFile,cExten					AS Character
+	Local cDrive									AS Character
+	Local cDir										AS Character
+	Local cFile										AS Character
+	Local cExten									AS Character
 	
 	//-- Parâmetros da Rotina -------------------------------------------------
     Default cDirInicial	:= ''
@@ -881,12 +902,13 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 			cMascProc	:= 'Todos os Arquivos (*.*)'
 		EndIf
 		
-		cRet    := tFileDialog( cMascProc	;	//01 cMascara
-							,	cTitulo		;	//02 cTitulo
-							,	nMascPadrao	;	//03 nDef
-							,	cDirInicial	;	//04 cDirInicial
-							,	.Not.lAbrir	;	//05 lSalvar
-							,	nOpcoes	    ;	//06 nOpcoes
+		cRet    := tFileDialog( 			;
+					/*01*/		cMascProc	;	//cMascara
+					/*02*/	,	cTitulo		;	//cTitulo
+					/*03*/	,	nMascPadrao	;	//nDef
+					/*04*/	,	cDirInicial	;	//cDirInicial
+					/*05*/	,	.Not.lAbrir	;	//lSalvar
+					/*06*/	,	nOpcoes	    ;	//nOpcoes
 							)
 
         If .Not. lKeepCase		;	cRet    := Lower(cRet)	;	EndIf
@@ -897,14 +919,15 @@ Static Function sfGetFile(	cMascara	AS Character;	//01 cMascara
 			cRet	:= IIf(GetRemoteType() == REMOTE_QT_LINUX,'/','\')
         EndIf
     Else
-		cRet    := cGetFile(cMascara	;	//01 cMascara
-						,	cTitulo		;	//02 cTitulo
-						,	nMascPadrao	;	//03 nMascPadrao
-						,	cDirInicial	;	//04 cDirInicial
-						,	lAbrir		;	//05 lAbrir		//ATENÇÃO!
-						,	nOpcoes		;	//06 nOpcoes
-						,	lServer		;	//07 lServer (def .T.)
-						,	lKeepCase	;	//08 lKeepCase
+		cRet    := cGetFile(			;
+				/*01*/		cMascara	;	//cMascara
+				/*02*/	,	cTitulo		;	//cTitulo
+				/*03*/	,	nMascPadrao	;	//nMascPadrao
+				/*04*/	,	cDirInicial	;	//cDirInicial
+				/*05*/	,	lAbrir		;	//lAbrir		//ATENÇÃO!
+				/*06*/	,	nOpcoes		;	//nOpcoes
+				/*07*/	,	lServer		;	//lServer (def .T.)
+				/*08*/	,	lKeepCase	;	//lKeepCase
 						)
 	EndIf
 
@@ -977,8 +1000,11 @@ User Function CXMakeExp(	aPergs	AS Array	;	//01 aPergs
 	Local cExpAux		:= ''						AS Character
 	Local cChTab		:= Char(9)					AS Character
 	Local cVlrPar									AS Character
-	Local cVar, cVarAux, cCpo						AS Character
-	Local nX,nY										AS Numeric
+	Local cVar										AS Character
+	Local cVarAux									AS Character
+	Local cCpo										AS Character
+	Local nX										AS Numeric
+	Local nY										AS Numeric
 
 	//-- Parâmetros da Rotina -------------------------------------------------
 	ParamObr 0		VAR aPergs
@@ -1076,7 +1102,8 @@ Static Function sfParserParam(	aPergs		AS Array	;	//01 aPergs
 							)
 
 	//-- Declaração de Variáveis ----------------------------------------------
-	Local cChar, cValor								AS Character
+	Local cChar										AS Character
+	Local cValor									AS Character
 	Local cChAspa		:= Chr(39)					AS Character
 	Local lEntreAspas	:= .F.						AS Logical
 	Local lBetWeen		:= .F.						AS Logical
