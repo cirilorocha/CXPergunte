@@ -7,7 +7,7 @@
 /*/{Protheus.doc} CXPergunte
 @autor			Cirilo Rocha
 @since			30/09/2025
-@version		1.39 (14/04/2026)
+@version		1.40 (10/05/2026)
 @url			https://github.com/cirilorocha/CXPergunte
 @description	Função para substituição da função padrão Pergunte(), usa exatamente os mesmos 
 					parâmetros, e aceita as perguntas passadas como array no 7ª parâmetro.
@@ -145,7 +145,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 	Local nDecimal									AS Numeric
 	Local nPresel									AS Numeric
 	Local cGSC										AS Character
-	Local cF3										AS Character
+	Local uF3										AS Variant
 	Local cGrpSxg									AS Character
 	Local uHelp										AS Variant
 	Local cPict										AS Character
@@ -342,7 +342,7 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 			EndIf
 
 			//-- Trata Campos Especiais que podem não ser fornecidos
-			cF3		:= If(nX1_F3     	> nLenPergs,'',aPergs[nX,nX1_F3])
+			uF3		:= If(nX1_F3     	> nLenPergs,'',aPergs[nX,nX1_F3])
 			uHelp   := If(nX1_HELP	 	> nLenPergs,'',aPergs[nX,nX1_HELP])
 			cPict   := If(nX1_PICTURE	> nLenPergs,'',AllTrim(aPergs[nX,nX1_PICTURE]))
 			If 	Empty(cPict) .And. ;
@@ -467,8 +467,10 @@ User Function CXPergunte(	ucPergunta	AS Variant	;	//01 ucPergunta
 				oGet:bHelp 		:= bHelp
 				If cGSC == 'F'	//-- File
 					oGet:bF3	:= &('{|oGet| sfSelArq('+cValToChar(nOpcoes)+',"'+cMascara+'","'+cDirInicial+'",'+cValToChar(lAbrir)+','+cValToChar(lServer)+',"'+cVar+'",'+cValToChar(nX)+', oGet )} ')
+				ElseIf ValType(uF3) == 'B'
+					oGet:bF3 := uF3
 				Else
-					oGet:cF3 := cF3
+					oGet:cF3 := uF3
 				EndIf
 				If nX == 1		;	oGet1	:= oGet		;	EndIf
 			EndIf
@@ -1211,7 +1213,9 @@ Return
 //   ##    ##          ##    ##    ##          ##      ##        ##       ####     ##   
 //   ##    ######   ####     ##    ######   ####      ##         ######  ##  ##    ## 
 //#################################################################################################
-
+//#DEFINE _NomeProg_		RetFileName(ProcSource())
+//#DEFINE _LINHA_			StrZero(ProcLine(),5)
+//#Define _MsgLinha_		SubStr(_NomeProg_,Rat('.',_NomeProg_)+1)+'('+_LINHA_+')'
 // ###################### FUNÇÃO TEMPORÁRIA SÓ PARA TESTES ##########################################
 //User Function CXTeste2()
 //
@@ -1274,7 +1278,7 @@ Return
 //	aAdd(aPergs,{,,'Informações De ?'	,,,,'N',01,0,3,'C',''			,,'Ass Médica',,,,,'Ass Odontológica',,,,,'Ambas',,,,,'',,,,,'',,,,,,,'help do campo!'})	//COMBO
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
 //	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
-//	aAdd(aPergs,{,,'Admissão até ?'		,,,,'D',08,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,'','',,'.RHDTADMAT.'})
+//	aAdd(aPergs,{,,'F3 Custom ?'		,,,,'C',10,0,,'G',''			,,'',,,''			,,'',,,  ,,'',,,,,'',,,,,'',,,,{|oGet| Alert("F3 Custom") },'',,'help'})
 //
 //Return aPergs
 //
